@@ -23,29 +23,34 @@ from markdown2 import markdown
 from bs4 import BeautifulSoup
 
 # -------------------------------
-# Initial Context and Prompts (Enneagram)
+# Initial Context and Prompts (DISC)
 # -------------------------------
-
-# We only have Enneagram types (1 through 9). We will generate a team report with similar structure to the original,
-# but without references to TypeFinder or letter-based preferences.
-# The sections will be simplified, focusing on:
+#
+# DISC has four primary types: D (Dominance), I (Influence), S (Steadiness), C (Conscientiousness).
+# It also has 8 subtypes, each a combination of two of the primary types.
+# For the sake of this example, we will consider these 8 subtypes as:
+# DI, ID, IS, SI, SC, CS, DC, CD
+#
+# The user will provide the team's DISC results as one of these 12 possible options (4 primaries + 8 subtypes).
+# We will generate a similar report with the following sections:
 # 1. Team Profile
 # 2. Type Distribution
 # 3. Team Insights
 # 4. Actions and Next Steps
 #
-# The content should be adapted to Enneagram. We have no preference dichotomies here.
+# All references to previous personality frameworks are replaced by DISC references.
+# The logic and structure remain similar.
 
 initial_context = """
-You are an expert organizational psychologist specializing in team dynamics and personality assessments using the Enneagram framework.
+You are an expert organizational psychologist specializing in team dynamics and personality assessments using the DISC framework.
 
 **Team Size:** {TEAM_SIZE}
 
-**Team Members and their Enneagram Types:**
+**Team Members and their DISC Results:**
 
 {TEAM_MEMBERS_LIST}
 
-You will create a comprehensive team personality report based on the Enneagram types present in this team. The Enneagram types are 1 through 9. Each has distinct motivations, fears, and core drivers that shape behavior.
+You will create a comprehensive team personality report based on the DISC framework. DISC describes behavioral tendencies along four primary dimensions: Dominance (D), Influence (I), Steadiness (S), and Conscientiousness (C). There are also 8 recognized subtypes that combine two of these primary dimensions, such as DI, ID, IS, SI, SC, CS, DC, CD.
 
 The report consists of four sections:
 
@@ -60,10 +65,9 @@ The report consists of four sections:
 - Write in Markdown format.
 - Use bullet points and tables where appropriate.
 - Offer specific, actionable insights.
-- Base all insights on the provided Enneagram types; do not invent data.
+- Base all insights on the provided DISC types; do not invent data.
 - Round all percentages to the nearest whole number.
-- Do not mention "MBTI" or "TypeFinder". Stick strictly to the Enneagram framework.
-- The total team size and type distribution are provided, use them as-is without recalculation beyond percentages.
+- Do not mention MBTI or Enneagram or any other framework; focus strictly on DISC.
 
 Your tone should be professional, neutral, and focused on providing value to team leaders.
 """
@@ -78,9 +82,9 @@ You are responsible for writing the **Team Profile** section of the report.
 
 **Section 1: Team Profile**
 
-- Introduce the concept of the Enneagram as a framework describing nine distinct personality types.
-- Summarize each Enneagram type present in the team, including its core motivations and general behavioral tendencies.
-- Highlight how the combination of these Enneagram types shapes the team's foundational personality and interpersonal dynamics.
+- Introduce the DISC framework, explaining each primary type (D, I, S, C) and the concept of subtypes.
+- Describe the core characteristics of each DISC result present in the team (whether primary or subtype) and how they shape general behaviors, motivations, and communication styles.
+- Highlight how the combination of these DISC categories influences the foundational team dynamics.
 - Required length: Approximately 500 words.
 
 **Begin your section below:**
@@ -98,9 +102,9 @@ You are responsible for writing the **Type Distribution** section of the report.
 
 **Section 2: Type Distribution**
 
-- Present a breakdown of how many team members fall into each of the Enneagram types present.
+- Present a breakdown of how many team members fall into each DISC category present.
 - Convert these counts into percentages of the total team.
-- Discuss what it means to have certain Enneagram types more dominant and how less represented types contribute diversity.
+- Discuss what it means to have certain DISC categories more dominant and how less represented categories contribute to diversity.
 - Highlight implications for communication, decision-making, and problem-solving based on these distributions.
 - Required length: Approximately 500 words.
 
@@ -120,8 +124,8 @@ You are responsible for writing the **Team Insights** section of the report.
 **Section 3: Team Insights**
 
 - Create two subheadings: **Strengths** and **Potential Blind Spots**.
-- For **Strengths**, identify at least four strengths emerging from the dominant Enneagram themes in the group. Each strength should be bolded as a single sentence followed by a paragraph explanation.
-- For **Potential Blind Spots**, identify at least four potential challenges or areas of improvement based on the Enneagram composition. Each blind spot should be bolded as a single sentence followed by a paragraph explanation.
+- For **Strengths**, identify at least four strengths emerging from the dominant DISC themes. Each strength should be bolded as a single sentence, followed by a paragraph explanation.
+- For **Potential Blind Spots**, identify at least four areas of improvement or challenges based on the DISC composition. Each blind spot should be bolded as a single sentence, followed by a paragraph explanation.
 - Required length: Approximately 700 words total.
 
 **Continue the report by adding your section below:**
@@ -139,9 +143,9 @@ You are responsible for writing the **Actions and Next Steps** section of the re
 
 **Section 4: Actions and Next Steps**
 
-- Provide actionable recommendations for team leaders to enhance collaboration, leveraging the Enneagram composition.
+- Provide actionable recommendations for team leaders to enhance collaboration, given the DISC composition.
 - Use subheadings for each area of action.
-- Offer a brief justification for each recommendation, linking it to the types present.
+- Offer a brief justification for each recommendation, linking it to the DISC types present.
 - Present the recommendations as bullet points or numbered lists of specific actions.
 - End output immediately after the last bullet with no concluding paragraph.
 - Required length: Approximately 400 words.
@@ -151,23 +155,25 @@ You are responsible for writing the **Actions and Next Steps** section of the re
 }
 
 # -------------------------------
-# Enneagram Types
+# DISC Categories
 # -------------------------------
-enneagram_types = [str(i) for i in range(1, 10)]
+disc_primaries = ['D', 'I', 'S', 'C']
+disc_subtypes = ['DI', 'ID', 'IS', 'SI', 'SC', 'CS', 'DC', 'CD']
+disc_types = disc_primaries + disc_subtypes
 
 # -------------------------------
 # Callback Function
 # -------------------------------
 def randomize_types_callback():
-    randomized_types = [random.choice(enneagram_types) for _ in range(int(st.session_state['team_size']))]
+    randomized_types = [random.choice(disc_types) for _ in range(int(st.session_state['team_size']))]
     for i in range(int(st.session_state['team_size'])):
-        key = f'enn_{i}'
+        key = f'disc_{i}'
         st.session_state[key] = randomized_types[i]
 
 # -------------------------------
 # Streamlit App Layout
 # -------------------------------
-st.title('Enneagram Team Report Generator')
+st.title('DISC Team Report Generator')
 
 if 'team_size' not in st.session_state:
     st.session_state['team_size'] = 5
@@ -179,37 +185,37 @@ team_size = st.number_input(
 
 st.button('Randomize Types', on_click=randomize_types_callback)
 
-st.subheader('Enter Enneagram types for each team member')
+st.subheader('Enter DISC results for each team member')
 for i in range(int(team_size)):
-    if f'enn_{i}' not in st.session_state:
-        st.session_state[f'enn_{i}'] = 'Select Enneagram Type'
+    if f'disc_{i}' not in st.session_state:
+        st.session_state[f'disc_{i}'] = 'Select DISC Type'
 
-team_enneagram_types = []
+team_disc_types = []
 for i in range(int(team_size)):
-    e_type = st.selectbox(
+    d_type = st.selectbox(
         f'Team Member {i+1}',
-        options=['Select Enneagram Type'] + enneagram_types,
-        key=f'enn_{i}'
+        options=['Select DISC Type'] + disc_types,
+        key=f'disc_{i}'
     )
-    if e_type != 'Select Enneagram Type':
-        team_enneagram_types.append(e_type)
+    if d_type != 'Select DISC Type':
+        team_disc_types.append(d_type)
     else:
-        team_enneagram_types.append(None)
+        team_disc_types.append(None)
 
 if st.button('Generate Report'):
-    if None in team_enneagram_types:
-        st.error('Please select Enneagram types for all team members.')
+    if None in team_disc_types:
+        st.error('Please select DISC types for all team members.')
     else:
         with st.spinner('Generating report, please wait...'):
-            team_types_str = ', '.join(team_enneagram_types)
+            team_types_str = ', '.join(team_disc_types)
             team_members_list = "\n".join([
-                f"{i+1}. Team Member {i+1}: Enneagram {e_type}"
-                for i, e_type in enumerate(team_enneagram_types)
+                f"{i+1}. Team Member {i+1}: {d_type}"
+                for i, d_type in enumerate(team_disc_types)
             ])
             
             # Compute counts and percentages
-            type_counts = Counter(team_enneagram_types)
-            total_members = len(team_enneagram_types)
+            type_counts = Counter(team_disc_types)
+            total_members = len(team_disc_types)
             type_percentages = {t: round((c/total_members)*100) for t, c in type_counts.items()}
             
             # Generate a type distribution plot
@@ -218,8 +224,8 @@ if st.button('Generate Report'):
 
             plt.figure(figsize=(10, 6))
             sns.barplot(x=list(type_counts.keys()), y=list(type_counts.values()), palette='viridis')
-            plt.title('Enneagram Type Distribution', fontsize=16)
-            plt.xlabel('Enneagram Types', fontsize=14)
+            plt.title('DISC Type Distribution', fontsize=16)
+            plt.xlabel('DISC Categories', fontsize=14)
             plt.ylabel('Number of Team Members', fontsize=14)
             plt.xticks(rotation=45)
             plt.tight_layout()
@@ -269,7 +275,7 @@ if st.button('Generate Report'):
             for section_name in section_order:
                 st.markdown(report_sections[section_name])
                 if section_name == "Type Distribution":
-                    st.header("Enneagram Type Distribution Plot")
+                    st.header("DISC Type Distribution Plot")
                     st.image(type_distribution_plot, use_column_width=True)
 
             # PDF Generation
@@ -373,6 +379,6 @@ if st.button('Generate Report'):
             st.download_button(
                 label="Download Report as PDF",
                 data=pdf_data,
-                file_name="team_enneagram_report.pdf",
+                file_name="team_disc_report.pdf",
                 mime="application/pdf"
             )

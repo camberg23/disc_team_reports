@@ -23,23 +23,27 @@ from markdown2 import markdown
 from bs4 import BeautifulSoup
 
 # -------------------------------
-# Initial Context and Prompts (DISC)
+# Updated Context and Prompts (DISC)
 # -------------------------------
 #
-# DISC has four primary types: D (Dominance), I (Influence), S (Steadiness), C (Conscientiousness).
-# It also has 8 subtypes, each a combination of two of the primary types.
-# For the sake of this example, we will consider these 8 subtypes as:
-# DI, ID, IS, SI, SC, CS, DC, CD
+# DISC has four primary types, which we refer to as:
+#   D (Drive), I (Influence), S (Support), C (Clarity).
 #
-# The user will provide the team's DISC results as one of these 12 possible options (4 primaries + 8 subtypes).
-# We will generate a similar report with the following sections:
-# 1. Team Profile
-# 2. Type Distribution
-# 3. Team Insights
-# 4. Actions and Next Steps
+# There are also 8 recognized hybrid types, each a combination of two primary types:
+#   DI, ID, IS, SI, SC, CS, DC, CD
+#   (We acknowledge that in written style we may represent these hybrids as D/i, I/d, I/s, etc.,
+#    but for the sake of functionality within this app, we'll keep the uppercase formatting.)
 #
-# All references to previous personality frameworks are replaced by DISC references.
-# The logic and structure remain similar.
+# The user will provide the team's DISC results as one of these 12 possible options.
+# We will generate a report with four main sections:
+#   1. Team Profile
+#   2. Type Distribution
+#   3. Team Insights
+#   4. Actions and Next Steps
+#
+# We avoid the term “dimensions” when referring to DISC, using “type” or “style” instead.
+# We also refer to the combination of two primary types as “hybrid types” (instead of “subtypes”).
+# Please do not mention any other frameworks (MBTI, Enneagram, etc.)—focus strictly on DISC.
 
 initial_context = """
 You are an expert organizational psychologist specializing in team dynamics and personality assessments using the DISC framework.
@@ -50,7 +54,7 @@ You are an expert organizational psychologist specializing in team dynamics and 
 
 {TEAM_MEMBERS_LIST}
 
-You will create a comprehensive team personality report based on the DISC framework. DISC describes behavioral tendencies along four primary dimensions: Dominance (D), Influence (I), Steadiness (S), and Conscientiousness (C). There are also 8 recognized subtypes that combine two of these primary dimensions, such as DI, ID, IS, SI, SC, CS, DC, CD.
+You will create a comprehensive team personality report based on the DISC framework. DISC stands for Drive (D), Influence (I), Support (S), and Clarity (C). In addition to these primary types, there are hybrid types (such as DI, ID, IS, SI, SC, CS, DC, CD) that combine two of the primary DISC styles.
 
 The report consists of four sections:
 
@@ -67,7 +71,7 @@ The report consists of four sections:
 - Offer specific, actionable insights.
 - Base all insights on the provided DISC types; do not invent data.
 - Round all percentages to the nearest whole number.
-- Do not mention MBTI or Enneagram or any other framework; focus strictly on DISC.
+- Do not mention any frameworks other than DISC.
 
 Your tone should be professional, neutral, and focused on providing value to team leaders.
 """
@@ -82,9 +86,9 @@ You are responsible for writing the **Team Profile** section of the report.
 
 **Section 1: Team Profile**
 
-- Introduce the DISC framework, explaining each primary type (D, I, S, C) and the concept of subtypes.
-- Describe the core characteristics of each DISC result present in the team (whether primary or subtype) and how they shape general behaviors, motivations, and communication styles.
-- Highlight how the combination of these DISC categories influences the foundational team dynamics.
+- Introduce the DISC framework, explaining each primary type (Drive, Influence, Support, Clarity) and the concept of hybrid types.
+- Describe the core characteristics of each DISC type/style present in the team and how they shape general behaviors, motivations, and communication styles.
+- Highlight how the combination of these DISC types/styles influences foundational team dynamics.
 - Required length: Approximately 500 words.
 
 **Begin your section below:**
@@ -102,9 +106,9 @@ You are responsible for writing the **Type Distribution** section of the report.
 
 **Section 2: Type Distribution**
 
-- Present a breakdown of how many team members fall into each DISC category present.
+- Present a breakdown of how many team members fall into each DISC type/style present.
 - Convert these counts into percentages of the total team.
-- Discuss what it means to have certain DISC categories more dominant and how less represented categories contribute to diversity.
+- Discuss what it means to have certain DISC types/styles more dominant, and how less represented types/styles contribute to diversity.
 - Highlight implications for communication, decision-making, and problem-solving based on these distributions.
 - Required length: Approximately 500 words.
 
@@ -123,9 +127,25 @@ You are responsible for writing the **Team Insights** section of the report.
 
 **Section 3: Team Insights**
 
-- Create two subheadings: **Strengths** and **Potential Blind Spots**.
-- For **Strengths**, identify at least four strengths emerging from the dominant DISC themes. Each strength should be bolded as a single sentence, followed by a paragraph explanation.
-- For **Potential Blind Spots**, identify at least four areas of improvement or challenges based on the DISC composition. Each blind spot should be bolded as a single sentence, followed by a paragraph explanation.
+Create the following subheadings (in Markdown):
+
+1. **Strengths**  
+   - Identify at least four key strengths emerging from the dominant DISC types/styles.  
+   - Each strength should be in **bold** as a single sentence, followed by a paragraph explanation.
+
+2. **Potential Blind Spots**  
+   - Identify at least four areas of improvement or challenges the team might face based on the DISC composition.  
+   - Each blind spot should be in **bold** as a single sentence, followed by a paragraph explanation.
+
+3. **Communication**  
+   - Describe any notable communication patterns relevant to the team’s mix of DISC types/styles.
+
+4. **Teamwork**  
+   - Note how the presence (or absence) of certain DISC types/styles can shape collaboration, delegation, and collective work.
+
+5. **Conflict**  
+   - Explain potential sources of conflict given the DISC composition, along with suggestions for healthy conflict resolution.
+
 - Required length: Approximately 700 words total.
 
 **Continue the report by adding your section below:**
@@ -145,7 +165,7 @@ You are responsible for writing the **Actions and Next Steps** section of the re
 
 - Provide actionable recommendations for team leaders to enhance collaboration, given the DISC composition.
 - Use subheadings for each area of action.
-- Offer a brief justification for each recommendation, linking it to the DISC types present.
+- Offer a brief justification for each recommendation, linking it to the DISC types/styles present.
 - Present the recommendations as bullet points or numbered lists of specific actions.
 - End output immediately after the last bullet with no concluding paragraph.
 - Required length: Approximately 400 words.
@@ -155,7 +175,7 @@ You are responsible for writing the **Actions and Next Steps** section of the re
 }
 
 # -------------------------------
-# DISC Categories
+# DISC Categories (unchanged for functionality)
 # -------------------------------
 disc_primaries = ['D', 'I', 'S', 'C']
 disc_subtypes = ['DI', 'ID', 'IS', 'SI', 'SC', 'CS', 'DC', 'CD']
@@ -216,7 +236,7 @@ if st.button('Generate Report'):
             # Compute counts and percentages
             type_counts = Counter(team_disc_types)
             total_members = len(team_disc_types)
-            type_percentages = {t: round((c/total_members)*100) for t, c in type_counts.items()}
+            type_percentages = {t: round((c / total_members) * 100) for t, c in type_counts.items()}
             
             # Generate a type distribution plot
             sns.set_style('whitegrid')
@@ -225,7 +245,7 @@ if st.button('Generate Report'):
             plt.figure(figsize=(10, 6))
             sns.barplot(x=list(type_counts.keys()), y=list(type_counts.values()), palette='viridis')
             plt.title('DISC Type Distribution', fontsize=16)
-            plt.xlabel('DISC Categories', fontsize=14)
+            plt.xlabel('DISC Types/Styles', fontsize=14)
             plt.ylabel('Number of Team Members', fontsize=14)
             plt.xticks(rotation=45)
             plt.tight_layout()

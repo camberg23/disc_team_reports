@@ -452,3 +452,12 @@ if st.button('Generate Report'):
                 doc.build(elements)
                 pdf_buffer.seek(0)
                 return pdf_buffer
+
+            # Generate and offer PDF download
+            pdf_data = convert_markdown_to_pdf(report_sections, type_distribution_plot)
+            st.download_button(
+                label="Download Report as PDF",
+                data=pdf_data,
+                file_name="team_disc_report.pdf",
+                mime="application/pdf"
+            )

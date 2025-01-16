@@ -302,29 +302,56 @@ if st.button('Generate Report'):
                     st.image(type_distribution_plot, use_column_width=True)
 
             # ----------------------------------------------------------------------------------
-            # PDF Generation
+            # PDF Generation (Updated Heading Styles)
             # ----------------------------------------------------------------------------------
-
+            
             def convert_markdown_to_pdf(report_sections_dict, distribution_plot):
                 pdf_buffer = io.BytesIO()
                 doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
                 elements = []
                 styles = getSampleStyleSheet()
-
+            
+                # Define separate styles for different heading levels
+                styleH1 = ParagraphStyle(
+                    'Heading1Custom',
+                    parent=styles['Heading1'],
+                    fontName='Times-Bold',
+                    fontSize=18,
+                    leading=22,
+                    spaceAfter=10,
+                )
+                styleH2 = ParagraphStyle(
+                    'Heading2Custom',
+                    parent=styles['Heading2'],
+                    fontName='Times-Bold',
+                    fontSize=16,
+                    leading=20,
+                    spaceAfter=8,
+                )
+                styleH3 = ParagraphStyle(
+                    'Heading3Custom',
+                    parent=styles['Heading3'],
+                    fontName='Times-Bold',
+                    fontSize=14,
+                    leading=18,
+                    spaceAfter=6,
+                )
+                styleH4 = ParagraphStyle(
+                    'Heading4Custom',
+                    parent=styles['Heading4'],
+                    fontName='Times-Bold',
+                    fontSize=12,
+                    leading=16,
+                    spaceAfter=4,
+                )
+            
+                # Normal, list item, etc.
                 styleN = ParagraphStyle(
                     'Normal',
                     parent=styles['Normal'],
                     fontName='Times-Roman',
                     fontSize=12,
                     leading=14,
-                )
-                styleH = ParagraphStyle(
-                    'Heading',
-                    parent=styles['Heading1'],
-                    fontName='Times-Bold',
-                    fontSize=18,
-                    leading=22,
-                    spaceAfter=10,
                 )
                 styleList = ParagraphStyle(
                     'List',
@@ -334,17 +361,18 @@ if st.button('Generate Report'):
                     leading=14,
                     leftIndent=20,
                 )
-
+            
                 def process_markdown(text):
                     # Convert Markdown to HTML
                     html = markdown(text, extras=['tables'])
                     soup = BeautifulSoup(html, 'html.parser')
-
+            
                     # Iterate over top-level elements in the HTML
                     for elem in soup.contents:
                         if isinstance(elem, str):
+                            # Skip bare strings (mostly whitespace)
                             continue
-
+            
                         # Handle tables
                         if elem.name == 'table':
                             table_data = []
@@ -360,12 +388,12 @@ if st.button('Generate Report'):
                                 rows = tbody.find_all('tr')
                             else:
                                 rows = elem.find_all('tr')
-
+            
                             for row in rows:
                                 cols = row.find_all(['td', 'th'])
                                 table_row = [col.get_text(strip=True) for col in cols]
                                 table_data.append(table_row)
-
+            
                             if table_data:
                                 t = Table(table_data, hAlign='LEFT')
                                 t.setStyle(TableStyle([
@@ -379,47 +407,48 @@ if st.button('Generate Report'):
                                 ]))
                                 elements.append(t)
                                 elements.append(Spacer(1, 12))
-
-                        # Handle headings
-                        elif elem.name in ['h1', 'h2', 'h3', 'h4']:
-                            elements.append(Paragraph(elem.text, styleH))
+            
+                        # Handle headings by matching h1 -> styleH1, h2 -> styleH2, etc.
+                        elif elem.name == 'h1':
+                            elements.append(Paragraph(elem.text, styleH1))
                             elements.append(Spacer(1, 12))
-
+                        elif elem.name == 'h2':
+                            elements.append(Paragraph(elem.text, styleH2))
+                            elements.append(Spacer(1, 12))
+                        elif elem.name == 'h3':
+                            elements.append(Paragraph(elem.text, styleH3))
+                            elements.append(Spacer(1, 12))
+                        elif elem.name == 'h4':
+                            elements.append(Paragraph(elem.text, styleH4))
+                            elements.append(Spacer(1, 12))
+            
                         # Handle paragraphs
                         elif elem.name == 'p':
                             elements.append(Paragraph(elem.decode_contents(), styleN))
                             elements.append(Spacer(1, 12))
-
+            
                         # Handle lists
                         elif elem.name == 'ul':
                             for li in elem.find_all('li', recursive=False):
                                 elements.append(Paragraph('• ' + li.text, styleList))
                                 elements.append(Spacer(1, 6))
-
+            
                         # Fallback for anything else
                         else:
                             elements.append(Paragraph(elem.get_text(strip=True), styleN))
                             elements.append(Spacer(1, 12))
-
+            
                 # Build PDF content from each report section
-                for sec in section_order:
+                for sec in ["Team Profile", "Type Distribution", "Team Insights", "Actions and Next Steps"]:
                     process_markdown(report_sections_dict[sec])
+                    # Insert distribution plot after "Type Distribution" section
                     if sec == "Type Distribution":
                         elements.append(Spacer(1, 12))
                         img_buffer = io.BytesIO(distribution_plot)
                         img = ReportLabImage(img_buffer, width=400, height=240)
                         elements.append(img)
                         elements.append(Spacer(1, 12))
-
+            
                 doc.build(elements)
                 pdf_buffer.seek(0)
                 return pdf_buffer
-
-            # Generate and offer PDF download
-            pdf_data = convert_markdown_to_pdf(report_sections, type_distribution_plot)
-            st.download_button(
-                label="Download Report as PDF",
-                data=pdf_data,
-                file_name="team_disc_report.pdf",
-                mime="application/pdf"
-            )

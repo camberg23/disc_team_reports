@@ -30,18 +30,6 @@ disc_primaries = ['D', 'I', 'S', 'C']
 disc_subtypes = ['DI', 'ID', 'IS', 'SI', 'SC', 'CS', 'DC', 'CD']
 disc_types = disc_primaries + disc_subtypes
 
-# Hybrid map for reference (in case you'd like to do post-processing):
-hybrid_map = {
-    'DI': 'D/i',
-    'ID': 'I/d',
-    'IS': 'I/s',
-    'SI': 'S/i',
-    'SC': 'S/c',
-    'CS': 'C/s',
-    'DC': 'D/c',
-    'CD': 'C/d'
-}
-
 def randomize_types_callback():
     randomized_types = [random.choice(disc_types) for _ in range(int(st.session_state['team_size']))]
     for i in range(int(st.session_state['team_size'])):
@@ -49,14 +37,14 @@ def randomize_types_callback():
         st.session_state[key] = randomized_types[i]
 
 # ----------------------------------------------------------------------------------
-# Updated Prompts with Explicit Formatting Instructions
+# Updated Prompts with Refined Heading Instructions
 # ----------------------------------------------------------------------------------
 
 initial_context = """
 You are an expert organizational psychologist specializing in team dynamics and personality assessments using the DISC framework.
 
-DISC stands for Drive (D), Influence (I), Support (S), and Clarity (C). 
-We also have hybrid types that combine two primary styles (e.g., D/i, I/d, S/c), 
+DISC stands for Drive (D), Influence (I), Support (S), and Clarity (C).
+We also have hybrid types that combine two primary styles (e.g., D/i, I/d, S/c),
 where the second letter is lowercase and separated by a slash.
 
 **Team Size:** {TEAM_SIZE}
@@ -76,7 +64,11 @@ Generate a comprehensive team personality report based on DISC, adhering to thes
 7. No mention of any other frameworks (e.g., MBTI, Enneagram).
 8. Round all percentages to the nearest whole number.
 9. Maintain a professional, neutral tone.
-10. **Use standard Markdown headings** (e.g., `##`) for subheadings, and add blank lines between paragraphs and bullet points to ensure clarity in PDF output.
+10. **Use a clear heading hierarchy**:
+   - `##` for main sections (1,2,3,4).
+   - `###` for subheadings (e.g., “Types on the Team,” “Types Not on the Team,” etc.).
+   - `####` or bullet points for individual DISC types.
+   - Blank lines between paragraphs, bullet points, and headings for clarity in PDF.
 """
 
 prompts = {
@@ -90,11 +82,15 @@ Write the **Team Profile** section of the report (Section 1).
 ## Section 1: Team Profile
 
 - Briefly introduce the DISC framework as Drive (D), Influence (I), Support (S), Clarity (C).
-- Mention that there are hybrid types, and whenever you refer to them, use slash-lowercase for the second letter (e.g., D/i, S/c).
+- Mention hybrid types with slash-lowercase (e.g., D/i, I/s, S/c).
 - Outline the core characteristics of each DISC type/style present on the team (primary or hybrid).
 - Describe how this combination of types affects foundational team dynamics.
-- **Use Markdown headings**, bullet points, and blank lines to ensure readability when converted to PDF.
-- Required length: Approximately 500 words.
+- **Heading hierarchy**: 
+  - `##` for this main section heading (already given).
+  - `###` for any subheadings you want (e.g., "Core Characteristics of DISC," etc.).
+  - `####` or bullet points if you list individual types by name.
+- Provide blank lines between paragraphs.
+- Required length: ~500 words.
 
 **Begin your section below:**
 """,
@@ -112,18 +108,19 @@ Write the **Type Distribution** section of the report (Section 2).
 ## Section 2: Type Distribution
 
 - Provide a breakdown (list or table) of how many team members fall into each DISC type/style, with percentages.
-- Under a heading `## Types on the Team`, list each type present with:
-  - 1–2 bullet points describing it  
-  - Count and percentage (on separate lines for clarity)  
-  - Use blank lines between each type's entry
-- Under a heading `## Types Not on the Team`, list each absent type/style with the same format (description, count=0, percentage=0).
-- Include a subheading `## Dominant Types` for the most common types and how they influence communication/decision-making.
-- Include a subheading `## Less Represented Types` for how the scarcity of certain types affects the team.
-- End with a subheading `## Summary` giving key insights (2–3 sentences).
-- **Use Markdown headings**, bullet points, and blank lines to ensure readability when converted to PDF.
-- Required length: Approximately 500 words.
+- Under a subheading `### Types on the Team`, list each type present with:
+  - `#### Type Name (D, I, S, C, or D/i, etc.)`
+  - 1–2 bullet points describing it
+  - Count and percentage on separate lines
+  - Blank lines between entries
+- Under a subheading `### Types Not on the Team`, list each absent type/style the same way.
+- Add a subheading `### Dominant Types` to discuss how the most common types influence communication/decision-making.
+- Add a subheading `### Less Represented Types` to discuss how the scarcity of certain types affects the team.
+- End with a subheading `### Summary` giving key insights (2–3 sentences).
+- Maintain heading hierarchy: `##` for main section, `###` for subtopics, `####` for individual types.
+- Required length: ~500 words.
 
-**Continue the report by adding your section below:**
+**Continue the report below:**
 """,
     "Team Insights": """
 {INITIAL_CONTEXT}
@@ -138,36 +135,31 @@ Write the **Team Insights** section of the report (Section 3).
 
 ## Section 3: Team Insights
 
-Create the following subheadings with `##` or `###`:
+Create the following subheadings using `###`:
 
 1. **Strengths**  
-   - Identify at least four key strengths emerging from the dominant DISC types/styles.  
-   - Each strength: 
-     - Put the name of the strength in **bold** on a single line,  
-     - Then a blank line,  
-     - Then a paragraph explanation.
+   - At least four key strengths from the dominant DISC types/styles.
+   - Each strength:
+     - Put the name of the strength in **bold** as a single line (e.g., `**Strong Relationship Building**`).
+     - Then a blank line, then a paragraph explanation.
 
 2. **Potential Blind Spots**  
-   - Identify at least four areas of improvement or challenges based on the DISC composition.  
-   - Each blind spot: 
-     - Put the name in **bold** on a single line,  
-     - Then a blank line,  
-     - Then a paragraph explanation.
+   - At least four areas of improvement or challenges.
+   - Same formatting approach (bold line + blank line + paragraph).
 
 3. **Communication**  
-   - Use `## Communication` or `### Communication`, then provide 1–2 paragraphs.  
-   - Add blank lines between paragraphs.
+   - Use `### Communication`, provide 1–2 paragraphs.
 
 4. **Teamwork**  
-   - Same approach, a heading plus 1–2 paragraphs, with line breaks for readability.
+   - `### Teamwork`, 1–2 paragraphs.
 
 5. **Conflict**  
-   - Again, a heading plus 1–2 paragraphs, ensuring blank lines.
+   - `### Conflict`, 1–2 paragraphs.
 
-- **Ensure** standard Markdown formatting with headings, blank lines, and bullet points, so the final PDF is well-formatted.
-- Required length: Approximately 700 words total.
+- Remember blank lines and heading hierarchy (`##` for Section 3 overall, `###` for each subheading).
+- Required length: ~700 words.
 
-**Continue the report by adding your section below:**
+**Continue the report below:**
 """,
     "Actions and Next Steps": """
 {INITIAL_CONTEXT}
@@ -183,13 +175,13 @@ Write the **Actions and Next Steps** section of the report (Section 4).
 ## Section 4: Actions and Next Steps
 
 - Provide actionable recommendations for team leaders, referencing the DISC composition.
-- Use subheadings for each major recommendation area (e.g., `## Fostering Adaptability`).
+- Use subheadings (`###`) for each major recommendation area.
 - Offer a brief justification for each recommendation, linking it to the specific DISC types/styles involved.
 - Present the recommendations as bullet points or numbered lists of specific actions, with blank lines between each item.
 - End your output immediately after the last bullet (no concluding paragraph).
-- Required length: Approximately 400 words.
+- Required length: ~400 words.
 
-**Conclude the report by adding your section below:**
+**Conclude the report below:**
 """
 }
 
@@ -388,14 +380,13 @@ if st.button('Generate Report'):
                                 elements.append(t)
                                 elements.append(Spacer(1, 12))
 
-                        # Handle headings (h1, h2, h3, etc.)
+                        # Handle headings
                         elif elem.name in ['h1', 'h2', 'h3', 'h4']:
                             elements.append(Paragraph(elem.text, styleH))
                             elements.append(Spacer(1, 12))
 
                         # Handle paragraphs
                         elif elem.name == 'p':
-                            # This is a normal paragraph
                             elements.append(Paragraph(elem.decode_contents(), styleN))
                             elements.append(Spacer(1, 12))
 

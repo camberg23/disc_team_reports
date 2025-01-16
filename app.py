@@ -22,31 +22,68 @@ from reportlab.lib import colors
 from markdown2 import markdown
 from bs4 import BeautifulSoup
 
+# ----------------------------------------------------------------------------------
+# IMPORTANT: Updated guidance integrated into LLM prompts so that it is reflected
+#            in the generated text. 
+# ----------------------------------------------------------------------------------
+
 # -------------------------------
-# Updated Context and Prompts (DISC)
+# DISC Categories and Hybrid Mapping
 # -------------------------------
+# Primary DISC Types:
+#   D (Drive), I (Influence), S (Support), C (Clarity)
 #
-# DISC has four primary types, which we refer to as:
-#   D (Drive), I (Influence), S (Support), C (Clarity).
+# Hybrid Types (second letter lowercase, slash notation for final text):
+#   DI -> D/i
+#   ID -> I/d
+#   IS -> I/s
+#   SI -> S/i
+#   SC -> S/c
+#   CS -> C/s
+#   DC -> D/c
+#   CD -> C/d
 #
-# There are also 8 recognized hybrid types, each a combination of two primary types:
-#   DI, ID, IS, SI, SC, CS, DC, CD
-#   (We acknowledge that in written style we may represent these hybrids as D/i, I/d, I/s, etc.,
-#    but for the sake of functionality within this app, we'll keep the uppercase formatting.)
-#
-# The user will provide the team's DISC results as one of these 12 possible options.
-# We will generate a report with four main sections:
-#   1. Team Profile
-#   2. Type Distribution
-#   3. Team Insights
-#   4. Actions and Next Steps
-#
-# We avoid the term “dimensions” when referring to DISC, using “type” or “style” instead.
-# We also refer to the combination of two primary types as “hybrid types” (instead of “subtypes”).
-# Please do not mention any other frameworks (MBTI, Enneagram, etc.)—focus strictly on DISC.
+# For functionality within the app, the user can select uppercase. 
+# We'll instruct the LLM to reference them in slash-lowercase format.
+
+disc_primaries = ['D', 'I', 'S', 'C']
+disc_subtypes = ['DI', 'ID', 'IS', 'SI', 'SC', 'CS', 'DC', 'CD']
+disc_types = disc_primaries + disc_subtypes
+
+# -------------------------------
+# Conversion Function (Optional)
+# -------------------------------
+# If you want to automatically convert the uppercase hybrid types to slash-lowercase
+# in the final text, you could post-process the LLM output. 
+# However, we are instructing the LLM to do it directly via prompts.
+
+hybrid_map = {
+    'DI': 'D/i',
+    'ID': 'I/d',
+    'IS': 'I/s',
+    'SI': 'S/i',
+    'SC': 'S/c',
+    'CS': 'C/s',
+    'DC': 'D/c',
+    'CD': 'C/d'
+}
+
+def randomize_types_callback():
+    randomized_types = [random.choice(disc_types) for _ in range(int(st.session_state['team_size']))]
+    for i in range(int(st.session_state['team_size'])):
+        key = f'disc_{i}'
+        st.session_state[key] = randomized_types[i]
+
+# -------------------------------
+# Updated LLM Prompts
+# -------------------------------
 
 initial_context = """
 You are an expert organizational psychologist specializing in team dynamics and personality assessments using the DISC framework.
+
+DISC stands for Drive (D), Influence (I), Support (S), and Clarity (C). 
+In addition to these four primary types, we also have hybrid types that combine two primary styles (e.g., D/i, I/d, S/c, etc.), 
+where the second letter is lowercase and separated by a slash.
 
 **Team Size:** {TEAM_SIZE}
 
@@ -54,26 +91,23 @@ You are an expert organizational psychologist specializing in team dynamics and 
 
 {TEAM_MEMBERS_LIST}
 
-You will create a comprehensive team personality report based on the DISC framework. DISC stands for Drive (D), Influence (I), Support (S), and Clarity (C). In addition to these primary types, there are hybrid types (such as DI, ID, IS, SI, SC, CS, DC, CD) that combine two of the primary DISC styles.
+Your goal:
+Generate a comprehensive team personality report based on DISC, adhering to these requirements:
+1. Refer to DISC as Drive, Influence, Support, Clarity (not Dominance, Influence, Steadiness, Conscientiousness).
+2. Use "type" or "style" instead of "dimension."
+3. For hybrid types, always use slash-lowercase for the second letter (e.g., D/i, C/s).
+4. Include a section listing "Types Not on the Team" with the same brief info as "Types on the Team."
+5. Emphasize "Dominant Types" and "Less Represented Types."
+6. Provide a brief summary of the distribution in the same section.
+7. No mention of any other frameworks (e.g., MBTI, Enneagram).
+8. Round all percentages to the nearest whole number.
+9. Maintain a professional, neutral tone.
 
-The report consists of four sections:
-
-1. **Team Profile**
-2. **Type Distribution**
-3. **Team Insights**
-4. **Actions and Next Steps**
-
-**Formatting Requirements:**
-
-- Use clear headings and subheadings.
-- Write in Markdown format.
-- Use bullet points and tables where appropriate.
-- Offer specific, actionable insights.
-- Base all insights on the provided DISC types; do not invent data.
-- Round all percentages to the nearest whole number.
-- Do not mention any frameworks other than DISC.
-
-Your tone should be professional, neutral, and focused on providing value to team leaders.
+Below is the structure you should follow for this DISC report:
+1. Team Profile
+2. Type Distribution
+3. Team Insights
+4. Actions and Next Steps
 """
 
 prompts = {
@@ -82,13 +116,13 @@ prompts = {
 
 **Your Role:**
 
-You are responsible for writing the **Team Profile** section of the report.
+Write the **Team Profile** section of the report (Section 1).
 
 **Section 1: Team Profile**
-
-- Introduce the DISC framework, explaining each primary type (Drive, Influence, Support, Clarity) and the concept of hybrid types.
-- Describe the core characteristics of each DISC type/style present in the team and how they shape general behaviors, motivations, and communication styles.
-- Highlight how the combination of these DISC types/styles influences foundational team dynamics.
+- Briefly introduce the DISC framework as Drive (D), Influence (I), Support (S), Clarity (C).
+- Mention that there are hybrid types, and whenever you refer to them, use slash-lowercase for the second letter (e.g., D/i, S/c).
+- Outline the core characteristics of each DISC type/style present on the team (primary or hybrid).
+- Describe how this combination of types affects foundational team dynamics.
 - Required length: Approximately 500 words.
 
 **Begin your section below:**
@@ -102,14 +136,16 @@ You are responsible for writing the **Team Profile** section of the report.
 
 **Your Role:**
 
-You are responsible for writing the **Type Distribution** section of the report.
+Write the **Type Distribution** section of the report (Section 2).
 
 **Section 2: Type Distribution**
-
-- Present a breakdown of how many team members fall into each DISC type/style present.
-- Convert these counts into percentages of the total team.
-- Discuss what it means to have certain DISC types/styles more dominant, and how less represented types/styles contribute to diversity.
-- Highlight implications for communication, decision-making, and problem-solving based on these distributions.
+- Provide a breakdown (table or list) of how many team members fall into each DISC type/style.
+- Convert these counts into percentages (rounded to nearest whole number).
+- Under a subheading "Types on the Team," list each type/style present with 1–2 bullet points describing it, plus count and percentage.
+- Under a subheading "Types Not on the Team," list any type/style not represented, with the same 1–2 bullet points (and note count = 0).
+- Include a brief note on how these distributions influence communication and decision-making.
+- Provide separate subheadings for "Dominant Types" and "Less Represented Types," discussing how each impacts the team.
+- End this section with a brief "Summary" subheading summarizing key insights.
 - Required length: Approximately 500 words.
 
 **Continue the report by adding your section below:**
@@ -123,28 +159,27 @@ You are responsible for writing the **Type Distribution** section of the report.
 
 **Your Role:**
 
-You are responsible for writing the **Team Insights** section of the report.
+Write the **Team Insights** section of the report (Section 3).
 
 **Section 3: Team Insights**
-
-Create the following subheadings (in Markdown):
+Create the following subheadings:
 
 1. **Strengths**  
-   - Identify at least four key strengths emerging from the dominant DISC types/styles.  
+   - Identify at least four key strengths emerging from the dominant DISC types/styles.
    - Each strength should be in **bold** as a single sentence, followed by a paragraph explanation.
 
 2. **Potential Blind Spots**  
-   - Identify at least four areas of improvement or challenges the team might face based on the DISC composition.  
+   - Identify at least four areas of improvement or challenges based on the DISC composition.
    - Each blind spot should be in **bold** as a single sentence, followed by a paragraph explanation.
 
 3. **Communication**  
    - Describe any notable communication patterns relevant to the team’s mix of DISC types/styles.
 
 4. **Teamwork**  
-   - Note how the presence (or absence) of certain DISC types/styles can shape collaboration, delegation, and collective work.
+   - Discuss how presence/absence of certain DISC types/styles can shape collaboration and delegation.
 
 5. **Conflict**  
-   - Explain potential sources of conflict given the DISC composition, along with suggestions for healthy conflict resolution.
+   - Explain potential sources of conflict given the DISC composition, and offer suggestions for healthy conflict resolution.
 
 - Required length: Approximately 700 words total.
 
@@ -159,15 +194,14 @@ Create the following subheadings (in Markdown):
 
 **Your Role:**
 
-You are responsible for writing the **Actions and Next Steps** section of the report.
+Write the **Actions and Next Steps** section of the report (Section 4).
 
 **Section 4: Actions and Next Steps**
-
-- Provide actionable recommendations for team leaders to enhance collaboration, given the DISC composition.
-- Use subheadings for each area of action.
-- Offer a brief justification for each recommendation, linking it to the DISC types/styles present.
+- Provide actionable recommendations for team leaders, referencing the DISC composition.
+- Use subheadings for each major recommendation area.
+- Offer a brief justification for each recommendation, linking it to the specific DISC types/styles involved.
 - Present the recommendations as bullet points or numbered lists of specific actions.
-- End output immediately after the last bullet with no concluding paragraph.
+- End your output immediately after the last bullet (no concluding paragraph).
 - Required length: Approximately 400 words.
 
 **Conclude the report by adding your section below:**
@@ -175,26 +209,11 @@ You are responsible for writing the **Actions and Next Steps** section of the re
 }
 
 # -------------------------------
-# DISC Categories (unchanged for functionality)
-# -------------------------------
-disc_primaries = ['D', 'I', 'S', 'C']
-disc_subtypes = ['DI', 'ID', 'IS', 'SI', 'SC', 'CS', 'DC', 'CD']
-disc_types = disc_primaries + disc_subtypes
-
-# -------------------------------
-# Callback Function
-# -------------------------------
-def randomize_types_callback():
-    randomized_types = [random.choice(disc_types) for _ in range(int(st.session_state['team_size']))]
-    for i in range(int(st.session_state['team_size'])):
-        key = f'disc_{i}'
-        st.session_state[key] = randomized_types[i]
-
-# -------------------------------
 # Streamlit App Layout
 # -------------------------------
 st.title('DISC Team Report Generator')
 
+# Initialize or retrieve team_size from session
 if 'team_size' not in st.session_state:
     st.session_state['team_size'] = 5
 
@@ -227,23 +246,30 @@ if st.button('Generate Report'):
         st.error('Please select DISC types for all team members.')
     else:
         with st.spinner('Generating report, please wait...'):
-            team_types_str = ', '.join(team_disc_types)
+            # Prepare the string listing team members and their DISC results
             team_members_list = "\n".join([
                 f"{i+1}. Team Member {i+1}: {d_type}"
                 for i, d_type in enumerate(team_disc_types)
             ])
-            
-            # Compute counts and percentages
+
+            # Calculate counts and percentages
             type_counts = Counter(team_disc_types)
             total_members = len(team_disc_types)
-            type_percentages = {t: round((c / total_members) * 100) for t, c in type_counts.items()}
-            
-            # Generate a type distribution plot
+            type_percentages = {
+                t: round((c / total_members) * 100)
+                for t, c in type_counts.items()
+            }
+
+            # Generate bar plot for distribution
             sns.set_style('whitegrid')
             plt.rcParams.update({'font.family': 'serif'})
 
             plt.figure(figsize=(10, 6))
-            sns.barplot(x=list(type_counts.keys()), y=list(type_counts.values()), palette='viridis')
+            sns.barplot(
+                x=list(type_counts.keys()),
+                y=list(type_counts.values()),
+                palette='viridis'
+            )
             plt.title('DISC Type Distribution', fontsize=16)
             plt.xlabel('DISC Types/Styles', fontsize=14)
             plt.ylabel('Number of Team Members', fontsize=14)
@@ -255,28 +281,29 @@ if st.button('Generate Report'):
             type_distribution_plot = buf.getvalue()
             plt.close()
 
-            # Initialize the LLM
+            # Initialize LLM
             chat_model = ChatOpenAI(
-                openai_api_key=st.secrets['API_KEY'], 
-                model_name='gpt-4o-2024-08-06', 
+                openai_api_key=st.secrets['API_KEY'],
+                model_name='gpt-4o-2024-08-06',
                 temperature=0.2
             )
 
-            # Prepare initial context
+            # Format the initial context
             initial_context_template = PromptTemplate.from_template(initial_context)
             formatted_initial_context = initial_context_template.format(
                 TEAM_SIZE=str(team_size),
                 TEAM_MEMBERS_LIST=team_members_list
             )
 
-            report_sections = {}
-            report_so_far = ""
+            # Generate sections in order
             section_order = [
                 "Team Profile",
                 "Type Distribution",
                 "Team Insights",
                 "Actions and Next Steps"
             ]
+            report_sections = {}
+            report_so_far = ""
 
             for section_name in section_order:
                 prompt_template = PromptTemplate.from_template(prompts[section_name])
@@ -291,14 +318,16 @@ if st.button('Generate Report'):
 
             final_report = "\n\n".join([report_sections[s] for s in section_order])
 
-            # Display the report
+            # Display the final report in Streamlit
             for section_name in section_order:
                 st.markdown(report_sections[section_name])
                 if section_name == "Type Distribution":
                     st.header("DISC Type Distribution Plot")
                     st.image(type_distribution_plot, use_column_width=True)
 
+            # -------------------------------
             # PDF Generation
+            # -------------------------------
             def convert_markdown_to_pdf(report_sections_dict, distribution_plot):
                 pdf_buffer = io.BytesIO()
                 doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
@@ -335,6 +364,8 @@ if st.button('Generate Report'):
                     for elem in soup.contents:
                         if isinstance(elem, str):
                             continue
+
+                        # Process any tables in the text
                         if elem.name == 'table':
                             table_data = []
                             thead = elem.find('thead')
@@ -366,24 +397,32 @@ if st.button('Generate Report'):
                                 ]))
                                 elements.append(t)
                                 elements.append(Spacer(1, 12))
+
+                        # Process headings
                         elif elem.name in ['h1', 'h2', 'h3']:
                             elements.append(Paragraph(elem.text, styleH))
                             elements.append(Spacer(1, 12))
+
+                        # Process paragraph text
                         elif elem.name == 'p':
                             elements.append(Paragraph(elem.decode_contents(), styleN))
                             elements.append(Spacer(1, 12))
+
+                        # Process lists
                         elif elem.name == 'ul':
                             for li in elem.find_all('li', recursive=False):
                                 elements.append(Paragraph('• ' + li.text, styleList))
                                 elements.append(Spacer(1, 12))
                         else:
+                            # Fallback for anything else
                             elements.append(Paragraph(elem.get_text(strip=True), styleN))
                             elements.append(Spacer(1, 12))
 
-                # Add sections
+                # Build PDF content from each report section
                 for sec in section_order:
                     process_markdown(report_sections_dict[sec])
                     if sec == "Type Distribution":
+                        # Insert the distribution plot image
                         elements.append(Spacer(1, 12))
                         img_buffer = io.BytesIO(distribution_plot)
                         img = ReportLabImage(img_buffer, width=400, height=240)

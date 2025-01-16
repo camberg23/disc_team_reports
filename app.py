@@ -95,7 +95,18 @@ Your goal:
 Generate a comprehensive team personality report based on DISC, adhering to these requirements:
 1. Refer to DISC as Drive, Influence, Support, Clarity (not Dominance, Influence, Steadiness, Conscientiousness).
 2. Use "type" or "style" instead of "dimension."
-3. For hybrid types, always use slash-lowercase for the second letter (e.g., D/i, C/s).
+3. For hybrid types, always use slash-lowercase for the second letter: 
+
+# Hybrid Types (second letter lowercase, slash notation for final text, NEVER use two uppercase!):
+#   DI -> D/i
+#   ID -> I/d
+#   IS -> I/s
+#   SI -> S/i
+#   SC -> S/c
+#   CS -> C/s
+#   DC -> D/c
+#   CD -> C/d
+
 4. Include a section listing "Types Not on the Team" with the same brief info as "Types on the Team."
 5. Emphasize "Dominant Types" and "Less Represented Types."
 6. Provide a brief summary of the distribution in the same section.

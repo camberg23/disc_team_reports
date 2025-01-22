@@ -98,7 +98,7 @@ Write the **Type Distribution** section of the report (Section 2).
 ## Section 2: Type Distribution
 
 Include the following items in your text (in Markdown):
-1. A **textual table** or list of each DISC type present in the overall set (primary + hybrid), with count and percentage (round to nearest whole) for each.
+1. A **textual table** of each DISC type present in the overall set (primary + hybrid), with count and percentage (round to nearest whole) for each. DO NOT LEAVE THIS OUT!
 2. `### Types on the Team` - List types actually present, from most common to least, with 1–2 bullet points about each type, and show count & percentage on separate lines.
 3. `### Types Not on the Team` - Same format, but count=0, 0% (still give a short description).
 4. `### Bar Chart` - Simply mention that we have included a bar chart below (the code handles displaying it).

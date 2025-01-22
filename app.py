@@ -37,7 +37,7 @@ def randomize_types_callback():
         st.session_state[key] = randomized_types[i]
 
 # ----------------------------------------------------------------------------------
-# Updated Prompts with a placeholder for the distribution table
+# Updated Prompts
 # ----------------------------------------------------------------------------------
 
 initial_context = """
@@ -56,19 +56,13 @@ where the second letter is lowercase and separated by a slash.
 Your goal:
 Generate a comprehensive team personality report based on DISC, adhering to these requirements:
 1. Refer to DISC as Drive, Influence, Support, Clarity (not Dominance, Influence, Steadiness, Conscientiousness).
-2. Use "type" or "style" instead of "dimension."
+2. Use "type" or "style" rather than "dimension."
 3. For hybrid types, always use slash-lowercase for the second letter (e.g., D/i, C/s).
-4. Include a section listing "Types Not on the Team" with the same brief info as "Types on the Team."
-5. Emphasize "Dominant Types" and "Less Represented Types."
-6. Provide a brief summary of the distribution in the same section.
-7. No mention of any other frameworks (e.g., MBTI, Enneagram).
-8. Round all percentages to the nearest whole number.
-9. Maintain a professional, neutral tone.
-10. **Use a clear heading hierarchy**:
-   - `##` for main sections (1,2,3,4).
-   - `###` for subheadings (e.g., “Types on the Team,” “Types Not on the Team,” etc.).
-   - `####` or bullet points for individual DISC types.
-   - Blank lines between paragraphs, bullet points, and headings for clarity in PDF.
+4. No mention of any other frameworks (e.g., MBTI, Enneagram).
+5. Round all percentages to the nearest whole number.
+6. Maintain a professional, neutral tone.
+7. Use **Markdown headings**: `##` for main sections (1,2,3,4) and `###` (or smaller) for subheadings.
+8. Provide blank lines between paragraphs and bullets for clarity.
 """
 
 prompts = {
@@ -83,13 +77,9 @@ Write the **Team Profile** section of the report (Section 1).
 
 - Briefly introduce the DISC framework as Drive (D), Influence (I), Support (S), Clarity (C).
 - Mention hybrid types with slash-lowercase (e.g., D/i, I/s, S/c).
-- Outline the core characteristics of each DISC type/style present on the team (primary or hybrid).
+- Outline the core characteristics of each DISC type/style actually present on the team (primary or hybrid).
 - Describe how this combination of types affects foundational team dynamics.
-- **Heading hierarchy**: 
-  - `##` for this main section heading (already given).
-  - `###` for any subheadings you want (e.g., "Core Characteristics of DISC," etc.).
-  - `####` or bullet points if you list individual types by name.
-- Provide blank lines between paragraphs.
+- Use appropriate subheadings and blank lines.
 - Required length: ~500 words.
 
 **Begin your section below:**
@@ -101,28 +91,24 @@ Write the **Team Profile** section of the report (Section 1).
 
 {REPORT_SO_FAR}
 
-**Distribution Table**:
-
-{DISTRIBUTION_TABLE}
-
 **Your Role:**
 
 Write the **Type Distribution** section of the report (Section 2).
 
 ## Section 2: Type Distribution
 
-- Provide a breakdown of how many team members fall into each DISC type/style, with percentages.
-- Under a subheading `### Types on the Team`, list each type present with:
-  - `#### Type Name (D, I, S, C, or D/i, etc.)`
-  - 1–2 bullet points describing it
-  - Count and percentage on separate lines
-  - Blank lines between entries
-- Under a subheading `### Types Not on the Team`, list each absent type/style the same way.
-- Add a subheading `### Dominant Types` to discuss how the most common types influence communication/decision-making.
-- Add a subheading `### Less Represented Types` to discuss how the scarcity of certain types affects the team.
-- End with a subheading `### Summary` giving key insights (2–3 sentences).
-- Maintain heading hierarchy: `##` for main section, `###` for subtopics, `####` for individual types.
-- Required length: ~500 words.
+Include the following items in your text (in Markdown):
+1. A **textual table** or list of each DISC type present in the overall set (primary + hybrid), with count and percentage (round to nearest whole) for each.
+2. `### Types on the Team` - List types actually present, from most common to least, with 1–2 bullet points about each type, and show count & percentage on separate lines.
+3. `### Types Not on the Team` - Same format, but count=0, 0% (still give a short description).
+4. `### Bar Chart` - Simply mention that we have included a bar chart below (the code handles displaying it).
+5. `### Dominant Types` - Explain how the most common styles influence communication/decision-making.
+6. `### Less Represented Types` - How the scarcity of certain styles impacts the team.
+7. `### Summary` - Wrap up key points in 2–3 sentences.
+
+Maintain heading hierarchy (`##` for this section, `###` for subtopics, bullet points as needed).
+
+Required length: ~500 words.
 
 **Continue the report below:**
 """,
@@ -139,29 +125,25 @@ Write the **Team Insights** section of the report (Section 3).
 
 ## Section 3: Team Insights
 
-Create the following subheadings using `###`:
+Include these subheadings (`###`):
+1. **Strengths**
+   - At least four strengths from the dominant DISC styles.  
+   - Each strength in **bold** on a single line, followed by a blank line, then a paragraph explanation.
 
-1. **Strengths**  
-   - At least four key strengths from the dominant DISC types/styles.
-   - Each strength:
-     - Put the name of the strength in **bold** as a single line.
-     - Then a blank line, then a paragraph explanation.
+2. **Potential Blind Spots**
+   - At least four challenges or areas of improvement.
+   - Same formatting approach (bold line, blank line, paragraph).
 
-2. **Potential Blind Spots**  
-   - At least four areas of improvement or challenges.
-   - Same formatting approach (bold line + blank line + paragraph).
-
-3. **Communication**  
+3. **Communication**
    - 1–2 paragraphs.
 
-4. **Teamwork**  
+4. **Teamwork**
    - 1–2 paragraphs.
 
-5. **Conflict**  
+5. **Conflict**
    - 1–2 paragraphs.
 
-- Remember blank lines and heading hierarchy (`##` for Section 3 overall, `###` for each subheading).
-- Required length: ~700 words.
+Required length: ~700 words. Add blank lines for readability.
 
 **Continue the report below:**
 """,
@@ -195,6 +177,7 @@ Write the **Actions and Next Steps** section of the report (Section 4).
 
 st.title('DISC Team Report Generator')
 
+# Ensure a default team size
 if 'team_size' not in st.session_state:
     st.session_state['team_size'] = 5
 
@@ -227,31 +210,22 @@ if st.button('Generate Report'):
         st.error('Please select DISC types for all team members.')
     else:
         with st.spinner('Generating report, please wait...'):
-            # Prepare the string listing team members and their DISC results
+            # Build a list string for LLM context
             team_members_list = "\n".join([
                 f"{i+1}. Team Member {i+1}: {d_type}"
                 for i, d_type in enumerate(team_disc_types)
             ])
 
-            # Calculate counts and percentages
+            # Count each type
+            from collections import Counter
             type_counts = Counter(team_disc_types)
             total_members = len(team_disc_types)
-            type_percentages = {
-                t: round((c / total_members) * 100)
-                for t, c in type_counts.items()
-            }
+            # Round percentages
+            type_percentages = {t: round((c/total_members)*100) for t,c in type_counts.items()}
 
-            # Create a Markdown table summarizing all DISC types (including those not present)
-            distribution_table_md = "Type | Count | Percentage\n---|---|---\n"
-            for t in disc_types:
-                c = type_counts.get(t, 0)
-                p = type_percentages.get(t, 0)
-                distribution_table_md += f"{t} | {c} | {p}%\n"
-
-            # Generate bar plot for distribution
+            # Make a bar chart
             sns.set_style('whitegrid')
             plt.rcParams.update({'font.family': 'serif'})
-
             plt.figure(figsize=(10, 6))
             sns.barplot(
                 x=list(type_counts.keys()),
@@ -269,21 +243,20 @@ if st.button('Generate Report'):
             type_distribution_plot = buf.getvalue()
             plt.close()
 
-            # Initialize LLM
+            # Prepare the LLM
             chat_model = ChatOpenAI(
                 openai_api_key=st.secrets['API_KEY'],
                 model_name='gpt-4o-2024-08-06',
                 temperature=0.2
             )
 
-            # Format the initial context
+            # Format initial context
             initial_context_template = PromptTemplate.from_template(initial_context)
             formatted_initial_context = initial_context_template.format(
                 TEAM_SIZE=str(team_size),
                 TEAM_MEMBERS_LIST=team_members_list
             )
 
-            # Generate sections in order
             section_order = [
                 "Team Profile",
                 "Type Distribution",
@@ -293,45 +266,35 @@ if st.button('Generate Report'):
             report_sections = {}
             report_so_far = ""
 
+            # Generate each section
             for section_name in section_order:
                 prompt_template = PromptTemplate.from_template(prompts[section_name])
-                
-                # For the "Type Distribution" section, insert the table
-                if section_name == "Type Distribution":
-                    prompt_variables = {
-                        "INITIAL_CONTEXT": formatted_initial_context.strip(),
-                        "REPORT_SO_FAR": report_so_far.strip(),
-                        "DISTRIBUTION_TABLE": distribution_table_md
-                    }
-                else:
-                    prompt_variables = {
-                        "INITIAL_CONTEXT": formatted_initial_context.strip(),
-                        "REPORT_SO_FAR": report_so_far.strip()
-                    }
-                
+                prompt_vars = {
+                    "INITIAL_CONTEXT": formatted_initial_context.strip(),
+                    "REPORT_SO_FAR": report_so_far.strip()
+                }
                 chain = LLMChain(prompt=prompt_template, llm=chat_model)
-                section_text = chain.run(**prompt_variables)
+                section_text = chain.run(**prompt_vars)
                 report_sections[section_name] = section_text.strip()
                 report_so_far += f"\n\n{section_text.strip()}"
 
-            # Display the final report in Streamlit
+            # Display the final text + bar chart
             for section_name in section_order:
                 st.markdown(report_sections[section_name])
                 if section_name == "Type Distribution":
                     st.header("DISC Type Distribution Plot")
                     st.image(type_distribution_plot, use_column_width=True)
 
-            # ----------------------------------------------------------------------------------
-            # PDF Generation (Updated Heading Styles)
-            # ----------------------------------------------------------------------------------
-            
+            # ----------------------------------------------------------
+            # PDF Generation
+            # ----------------------------------------------------------
             def convert_markdown_to_pdf(report_sections_dict, distribution_plot):
                 pdf_buffer = io.BytesIO()
                 doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
                 elements = []
                 styles = getSampleStyleSheet()
-            
-                # Define separate styles for different heading levels
+
+                # Heading styles
                 styleH1 = ParagraphStyle(
                     'Heading1Custom',
                     parent=styles['Heading1'],
@@ -364,8 +327,8 @@ if st.button('Generate Report'):
                     leading=16,
                     spaceAfter=4,
                 )
-            
-                # Normal, list item, etc.
+
+                # Normal/list styles
                 styleN = ParagraphStyle(
                     'Normal',
                     parent=styles['Normal'],
@@ -381,20 +344,40 @@ if st.button('Generate Report'):
                     leading=14,
                     leftIndent=20,
                 )
-            
-                def process_markdown(text):
-                    # Convert Markdown to HTML
-                    html = markdown(text, extras=['tables'])
+
+                # Convert Markdown -> PDF
+                def process_markdown(md_text):
+                    html = markdown(md_text, extras=['tables'])
                     soup = BeautifulSoup(html, 'html.parser')
-            
-                    # Iterate over top-level elements in the HTML
+
                     for elem in soup.contents:
                         if isinstance(elem, str):
-                            # Skip bare strings (mostly whitespace)
                             continue
-            
-                        # Handle tables
-                        if elem.name == 'table':
+
+                        if elem.name == 'h1':
+                            elements.append(Paragraph(elem.text, styleH1))
+                            elements.append(Spacer(1, 12))
+                        elif elem.name == 'h2':
+                            elements.append(Paragraph(elem.text, styleH2))
+                            elements.append(Spacer(1, 12))
+                        elif elem.name == 'h3':
+                            elements.append(Paragraph(elem.text, styleH3))
+                            elements.append(Spacer(1, 12))
+                        elif elem.name == 'h4':
+                            elements.append(Paragraph(elem.text, styleH4))
+                            elements.append(Spacer(1, 12))
+
+                        elif elem.name == 'p':
+                            elements.append(Paragraph(elem.decode_contents(), styleN))
+                            elements.append(Spacer(1, 12))
+
+                        elif elem.name == 'ul':
+                            for li in elem.find_all('li', recursive=False):
+                                elements.append(Paragraph('• ' + li.text, styleList))
+                                elements.append(Spacer(1, 6))
+
+                        elif elem.name == 'table':
+                            # Basic table handler
                             table_data = []
                             thead = elem.find('thead')
                             if thead:
@@ -408,12 +391,11 @@ if st.button('Generate Report'):
                                 rows = tbody.find_all('tr')
                             else:
                                 rows = elem.find_all('tr')
-            
                             for row in rows:
-                                cols = row.find_all(['td', 'th'])
-                                table_row = [col.get_text(strip=True) for col in cols]
+                                cols = row.find_all(['td','th'])
+                                table_row = [c.get_text(strip=True) for c in cols]
                                 table_data.append(table_row)
-            
+
                             if table_data:
                                 t = Table(table_data, hAlign='LEFT')
                                 t.setStyle(TableStyle([
@@ -427,53 +409,28 @@ if st.button('Generate Report'):
                                 ]))
                                 elements.append(t)
                                 elements.append(Spacer(1, 12))
-            
-                        # Handle headings by matching h1 -> styleH1, h2 -> styleH2, etc.
-                        elif elem.name == 'h1':
-                            elements.append(Paragraph(elem.text, styleH1))
-                            elements.append(Spacer(1, 12))
-                        elif elem.name == 'h2':
-                            elements.append(Paragraph(elem.text, styleH2))
-                            elements.append(Spacer(1, 12))
-                        elif elem.name == 'h3':
-                            elements.append(Paragraph(elem.text, styleH3))
-                            elements.append(Spacer(1, 12))
-                        elif elem.name == 'h4':
-                            elements.append(Paragraph(elem.text, styleH4))
-                            elements.append(Spacer(1, 12))
-            
-                        # Handle paragraphs
-                        elif elem.name == 'p':
-                            elements.append(Paragraph(elem.decode_contents(), styleN))
-                            elements.append(Spacer(1, 12))
-            
-                        # Handle lists
-                        elif elem.name == 'ul':
-                            for li in elem.find_all('li', recursive=False):
-                                elements.append(Paragraph('• ' + li.text, styleList))
-                                elements.append(Spacer(1, 6))
-            
-                        # Fallback for anything else
+
                         else:
+                            # fallback
                             elements.append(Paragraph(elem.get_text(strip=True), styleN))
                             elements.append(Spacer(1, 12))
-            
-                # Build PDF content from each report section
+
+                # Process each section's text
                 for sec in ["Team Profile", "Type Distribution", "Team Insights", "Actions and Next Steps"]:
                     process_markdown(report_sections_dict[sec])
-                    # Insert distribution plot after "Type Distribution" section
                     if sec == "Type Distribution":
+                        # Insert distribution plot
                         elements.append(Spacer(1, 12))
-                        img_buffer = io.BytesIO(distribution_plot)
-                        img = ReportLabImage(img_buffer, width=400, height=240)
+                        img_buf = io.BytesIO(distribution_plot)
+                        img = ReportLabImage(img_buf, width=400, height=240)
                         elements.append(img)
                         elements.append(Spacer(1, 12))
-            
+
                 doc.build(elements)
                 pdf_buffer.seek(0)
                 return pdf_buffer
 
-            # Generate and offer PDF download
+            # Finally, PDF download
             pdf_data = convert_markdown_to_pdf(report_sections, type_distribution_plot)
             st.download_button(
                 label="Download Report as PDF",
@@ -481,7 +438,6 @@ if st.button('Generate Report'):
                 file_name="team_disc_report.pdf",
                 mime="application/pdf"
             )
-
 
 # import streamlit as st
 # from langchain_community.chat_models import ChatOpenAI

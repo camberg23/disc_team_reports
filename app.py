@@ -232,7 +232,7 @@ if st.button("Generate Report from CSV"):
             valid_rows = []
             for i, row in df.iterrows():
                 name = row.get("User Name", "").strip()
-                disc_type_raw = row.get("DISC Type", "").strip()
+                disc_type_raw = str(row.get("DISC Type", "")).strip()
                 # parse
                 disc_type_parsed = parse_disc_type(disc_type_raw)
                 if name and disc_type_parsed:

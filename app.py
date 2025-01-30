@@ -208,17 +208,17 @@ Write the **Actions and Next Steps** section of the report (Section 4).
 # Streamlit App
 # ----------------------------------------------------------------------------------
 
-st.title('DISC Team Report Generator (CSV-based)')
+st.title('DISC Team Report Generator')
 
 # -- Cover Page Info
 st.subheader("Cover Page Details")
 logo_path = "truity_logo.png"  # Hardcode or rename as desired
-company_name = st.text_input("Company Name (for cover page)", "Example Corp")
-team_name = st.text_input("Team Name (for cover page)", "Sales Team")
+company_name = st.text_input("Company Name (for cover page)", "")
+team_name = st.text_input("Team Name (for cover page)", "")
 today_str = datetime.date.today().strftime("%B %d, %Y")
 custom_date = st.text_input("Date (for cover page)", today_str)
 
-st.subheader("Upload CSV with columns: User Name, DISC Type, ignoring others")
+st.subheader("Upload CSV")
 uploaded_csv = st.file_uploader("Upload CSV", type=["csv"])
 
 if st.button("Generate Report from CSV"):

@@ -33,7 +33,6 @@ import datetime
 # We'll map text forms in the CSV (e.g. "Drive/Support") to slash-lowercase codes (e.g. "D/s").
 # Single words: "Drive" => "D", "Influence" => "I", "Support" => "S", "Clarity" => "C"
 # Hybrids: "Drive/Influence" => "D/i", "Influence/Support" => "I/s", etc.
-
 csv_to_disc_map = {
     "Drive": "D",
     "Influence": "I",
@@ -48,9 +47,6 @@ def parse_disc_type(text: str) -> str:
     """
     if not text:
         return ""
-
-    # Some CSV rows might have "Drive/Influence" etc.
-    # We'll split on '/', then map each piece
     parts = text.split('/')
     codes = []
     for p in parts:
@@ -58,21 +54,17 @@ def parse_disc_type(text: str) -> str:
         if p in csv_to_disc_map:
             codes.append(csv_to_disc_map[p])
         else:
-            # Not recognized
             return ""
-
     if len(codes) == 1:
-        return codes[0]  # e.g. "D" or "I"
+        return codes[0]
     elif len(codes) == 2:
-        # e.g. "D/i"
         return f"{codes[0]}/{codes[1].lower()}"
     else:
-        return ""  # We ignore anything more complex
+        return ""
 
 # ----------------------------------------------------------------------------------
-# Prompts (same as before, except no changes to structure)
+# Prompts
 # ----------------------------------------------------------------------------------
-
 initial_context = """
 You are an expert organizational psychologist specializing in team dynamics and personality assessments using the DISC framework.
 
@@ -117,12 +109,16 @@ Write the **Team Profile** section of the report (Section 1).
 
 **Begin your section below:**
 """,
+    # We add a placeholder {DISTRIBUTION_TABLE} so the LLM sees exact counts.
     "Type Distribution": """
 {INITIAL_CONTEXT}
 
 **Report So Far:**
 
 {REPORT_SO_FAR}
+
+**Actual Type Counts & Percentages**:
+{DISTRIBUTION_TABLE}
 
 **Your Role:**
 
@@ -160,7 +156,7 @@ Write the **Team Insights** section of the report (Section 3).
 
 Include these subheadings (`###`):
 1. **Strengths**
-   - At least four strengths from the dominant DISC styles.  
+   - At least four strengths from the dominant DISC styles.
    - Each strength in **bold** on a single line, followed by a blank line, then a paragraph explanation.
 
 2. **Potential Blind Spots**
@@ -210,9 +206,8 @@ Write the **Actions and Next Steps** section of the report (Section 4).
 
 st.title('DISC Team Report Generator')
 
-# -- Cover Page Info
 st.subheader("Cover Page Details")
-logo_path = "truity_logo.png"  # Hardcode or rename as desired
+logo_path = "truity_logo.png"
 company_name = st.text_input("Company Name (for cover page)", "")
 team_name = st.text_input("Team Name (for cover page)", "")
 today_str = datetime.date.today().strftime("%B %d, %Y")
@@ -227,51 +222,40 @@ if st.button("Generate Report from CSV"):
     else:
         with st.spinner("Processing CSV..."):
             df = pd.read_csv(uploaded_csv)
-            # We only care about 'User Name' and 'DISC Type'
-            # We'll ignore rows with missing or blank 'DISC Type'
             valid_rows = []
             for i, row in df.iterrows():
-                name = row.get("User Name", "").strip()
-                disc_type_raw = str(row.get("DISC Type", "")).strip()
-                # parse
-                disc_type_parsed = parse_disc_type(disc_type_raw)
-                if name and disc_type_parsed:
-                    valid_rows.append((name, disc_type_parsed))
-            
-            # If no valid rows, we can't proceed
+                nm = str(row.get("User Name", "")).strip()
+                raw_dt = str(row.get("DISC Type", "")).strip()
+                dt_parsed = parse_disc_type(raw_dt)
+                if nm and dt_parsed:
+                    valid_rows.append((nm, dt_parsed))
+
             if not valid_rows:
-                st.error("No valid DISC types found in CSV. Nothing to report.")
+                st.error("No valid DISC types found in CSV.")
             else:
-                # Build the list for the LLM
                 team_size = len(valid_rows)
-                team_members_list = ""
-                for i, (nm, dt) in enumerate(valid_rows):
-                    team_members_list += f"{i+1}. {nm}: {dt}\n"
-                
-                # Count them up
+                # Prepare a user list
+                disc_lines = []
+                for idx, (u, d) in enumerate(valid_rows, start=1):
+                    disc_lines.append(f"{idx}. {u}: {d}")
+
+                team_members_list = "\n".join(disc_lines)
+
                 from collections import Counter
-                type_counts = Counter([r[1] for r in valid_rows])
+                type_counts = Counter([v[1] for v in valid_rows])
                 total_members = len(valid_rows)
-                # Round percentages
                 type_percentages = {
-                    t: round((c / total_members) * 100)
-                    for t, c in type_counts.items()
+                    t: round((count/total_members)*100)
+                    for t, count in type_counts.items()
                 }
 
                 # Make bar chart
                 sns.set_style('whitegrid')
                 plt.rcParams.update({'font.family': 'serif'})
-                plt.figure(figsize=(10, 6))
-                # x-axis is the disc types we found
-                # y-axis is counts
-                # We'll just do them in alphabetical order for consistency
+                plt.figure(figsize=(10,6))
                 sorted_types = sorted(type_counts.keys())
                 sorted_counts = [type_counts[t] for t in sorted_types]
-                sns.barplot(
-                    x=sorted_types,
-                    y=sorted_counts,
-                    palette='viridis'
-                )
+                sns.barplot(x=sorted_types, y=sorted_counts, palette='viridis')
                 plt.title('DISC Type Distribution', fontsize=16)
                 plt.xlabel('DISC Types/Styles', fontsize=14)
                 plt.ylabel('Number of Team Members', fontsize=14)
@@ -283,17 +267,30 @@ if st.button("Generate Report from CSV"):
                 type_distribution_plot = buf.getvalue()
                 plt.close()
 
-                # Setup LLM
+                # Build a textual table of counts for injection
+                # so the LLM sees the real data and doesn't guess
+                # We'll include all possible DISC types (including subtypes)
+                disc_primaries = ['D','I','S','C']
+                disc_subtypes = ['D/i','I/d','I/s','S/i','S/c','C/s','D/c','C/d']
+                all_disc = disc_primaries + disc_subtypes
+
+                distribution_table_md = "Type | Count | Percentage\n---|---|---\n"
+                for dstyle in all_disc:
+                    c = type_counts.get(dstyle, 0)
+                    p = type_percentages.get(dstyle, 0)
+                    distribution_table_md += f"{dstyle} | {c} | {p}%\n"
+
+                # LLM
                 chat_model = ChatOpenAI(
                     openai_api_key=st.secrets['API_KEY'],
                     model_name='gpt-4o-2024-08-06',
                     temperature=0.2
                 )
 
-                # Build initial context
+                # initial context
                 from langchain.prompts import PromptTemplate
-                initial_context_template = PromptTemplate.from_template(initial_context)
-                formatted_initial_context = initial_context_template.format(
+                init_template = PromptTemplate.from_template(initial_context)
+                formatted_init = init_template.format(
                     TEAM_SIZE=str(team_size),
                     TEAM_MEMBERS_LIST=team_members_list
                 )
@@ -308,28 +305,36 @@ if st.button("Generate Report from CSV"):
                 report_sections = {}
                 report_so_far = ""
 
-                for section_name in section_order:
-                    prompt_template = PromptTemplate.from_template(prompts[section_name])
-                    prompt_vars = {
-                        "INITIAL_CONTEXT": formatted_initial_context.strip(),
-                        "REPORT_SO_FAR": report_so_far.strip()
-                    }
-                    from langchain.chains import LLMChain
-                    chain = LLMChain(prompt=prompt_template, llm=chat_model)
-                    section_text = chain.run(**prompt_vars)
-                    report_sections[section_name] = section_text.strip()
-                    report_so_far += f"\n\n{section_text.strip()}"
+                for sec_name in section_order:
+                    prompt_template = PromptTemplate.from_template(prompts[sec_name])
+                    if sec_name == "Type Distribution":
+                        # pass the distribution_table to LLM
+                        prompt_vars = {
+                            "INITIAL_CONTEXT": formatted_init.strip(),
+                            "REPORT_SO_FAR": report_so_far.strip(),
+                            "DISTRIBUTION_TABLE": distribution_table_md
+                        }
+                    else:
+                        prompt_vars = {
+                            "INITIAL_CONTEXT": formatted_init.strip(),
+                            "REPORT_SO_FAR": report_so_far.strip()
+                        }
 
-                # Display in Streamlit
-                for sec in section_order:
-                    st.markdown(report_sections[sec])
-                    if sec == "Type Distribution":
+                    chain = LLMChain(prompt=prompt_template, llm=chat_model)
+                    sec_text = chain.run(**prompt_vars)
+                    report_sections[sec_name] = sec_text.strip()
+                    report_so_far += f"\n\n{sec_text.strip()}"
+
+                # Output
+                for sec_name in section_order:
+                    st.markdown(report_sections[sec_name])
+                    if sec_name == "Type Distribution":
                         st.header("DISC Type Distribution Plot")
                         st.image(type_distribution_plot, use_column_width=True)
 
-                # PDF with cover page
+                # PDF with cover
                 def build_cover_page(logo_path, company_name, team_name, date_str):
-                    cover_elems = []
+                    elems = []
                     styles = getSampleStyleSheet()
 
                     cover_title_style = ParagraphStyle(
@@ -350,54 +355,48 @@ if st.button("Generate Report from CSV"):
                         spaceAfter=8
                     )
 
-                    # Add some vertical space
-                    cover_elems.append(Spacer(1, 80))
-
-                    # Logo ~ half size
+                    elems.append(Spacer(1,80))
                     try:
                         logo = ReportLabImage(logo_path, width=140, height=52)
-                        cover_elems.append(logo)
+                        elems.append(logo)
                     except:
                         pass
 
-                    cover_elems.append(Spacer(1, 50))
-
-                    # Title
+                    elems.append(Spacer(1,50))
                     title_para = Paragraph("DISC For The Workplace<br/>Team Report", cover_title_style)
-                    cover_elems.append(title_para)
-
-                    cover_elems.append(Spacer(1, 50))
-
-                    # Line
+                    elems.append(title_para)
+                    elems.append(Spacer(1,50))
                     sep = HRFlowable(width="70%", color=colors.darkgoldenrod)
-                    cover_elems.append(sep)
-                    cover_elems.append(Spacer(1, 20))
+                    elems.append(sep)
+                    elems.append(Spacer(1,20))
 
-                    # Company, Team, Date
-                    comp_para = Paragraph(company_name, cover_text_style)
-                    cover_elems.append(comp_para)
-                    tm_para = Paragraph(team_name, cover_text_style)
-                    cover_elems.append(tm_para)
-                    dt_para = Paragraph(date_str, cover_text_style)
-                    cover_elems.append(dt_para)
+                    cpara = Paragraph(company_name, cover_text_style)
+                    elems.append(cpara)
+                    tpara = Paragraph(team_name, cover_text_style)
+                    elems.append(tpara)
+                    dpara = Paragraph(date_str, cover_text_style)
+                    elems.append(dpara)
 
-                    cover_elems.append(Spacer(1, 60))
-                    cover_elems.append(PageBreak())
-                    return cover_elems
+                    elems.append(Spacer(1,60))
+                    elems.append(PageBreak())
+                    return elems
 
                 def convert_markdown_to_pdf_with_cover(
-                    report_dict, distribution_plot,
-                    logo_path, company_name, team_name, date_str
+                    report_dict,
+                    distribution_plot,
+                    logo_path,
+                    company_name,
+                    team_name,
+                    date_str
                 ):
-                    pdf_buffer = io.BytesIO()
-                    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
+                    pdf_buf = io.BytesIO()
+                    doc = SimpleDocTemplate(pdf_buf, pagesize=letter)
                     elements = []
 
-                    # Cover
-                    cover_elems = build_cover_page(logo_path, company_name, team_name, date_str)
-                    elements.extend(cover_elems)
+                    # cover page
+                    cover = build_cover_page(logo_path, company_name, team_name, date_str)
+                    elements.extend(cover)
 
-                    # Normal styles
                     styles = getSampleStyleSheet()
                     styleH1 = ParagraphStyle(
                         'Heading1Custom',
@@ -447,32 +446,31 @@ if st.button("Generate Report from CSV"):
                         leftIndent=20,
                     )
 
-                    def process_md(md_text):
+                    def process_markdown(md_text):
                         html = markdown(md_text, extras=['tables'])
                         soup = BeautifulSoup(html, 'html.parser')
                         for elem in soup.contents:
                             if isinstance(elem, str):
                                 continue
-
                             if elem.name == 'h1':
                                 elements.append(Paragraph(elem.text, styleH1))
-                                elements.append(Spacer(1, 12))
+                                elements.append(Spacer(1,12))
                             elif elem.name == 'h2':
                                 elements.append(Paragraph(elem.text, styleH2))
-                                elements.append(Spacer(1, 12))
+                                elements.append(Spacer(1,12))
                             elif elem.name == 'h3':
                                 elements.append(Paragraph(elem.text, styleH3))
-                                elements.append(Spacer(1, 12))
+                                elements.append(Spacer(1,12))
                             elif elem.name == 'h4':
                                 elements.append(Paragraph(elem.text, styleH4))
-                                elements.append(Spacer(1, 12))
+                                elements.append(Spacer(1,12))
                             elif elem.name == 'p':
                                 elements.append(Paragraph(elem.decode_contents(), styleN))
-                                elements.append(Spacer(1, 12))
+                                elements.append(Spacer(1,12))
                             elif elem.name == 'ul':
                                 for li in elem.find_all('li', recursive=False):
                                     elements.append(Paragraph('• ' + li.text, styleList))
-                                    elements.append(Spacer(1, 6))
+                                    elements.append(Spacer(1,6))
                             elif elem.name == 'table':
                                 table_data = []
                                 thead = elem.find('thead')
@@ -489,8 +487,8 @@ if st.button("Generate Report from CSV"):
                                     rows = elem.find_all('tr')
                                 for row in rows:
                                     cols = row.find_all(['td','th'])
-                                    table_row = [c.get_text(strip=True) for c in cols]
-                                    table_data.append(table_row)
+                                    row_data = [c.get_text(strip=True) for c in cols]
+                                    table_data.append(row_data)
 
                                 if table_data:
                                     t = Table(table_data, hAlign='LEFT')
@@ -504,19 +502,19 @@ if st.button("Generate Report from CSV"):
                                         ('GRID', (0, 0), (-1, -1), 1, colors.black),
                                     ]))
                                     elements.append(t)
-                                    elements.append(Spacer(1, 12))
+                                    elements.append(Spacer(1,12))
                             else:
                                 elements.append(Paragraph(elem.get_text(strip=True), styleN))
-                                elements.append(Spacer(1, 12))
+                                elements.append(Spacer(1,12))
 
-                    for sec in ["Team Profile", "Type Distribution", "Team Insights", "Actions and Next Steps"]:
-                        process_md(report_dict[sec])
-                        if sec == "Type Distribution":
-                            elements.append(Spacer(1, 12))
-                            img_buf = io.BytesIO(distribution_plot)
-                            img = ReportLabImage(img_buf, width=400, height=240)
-                            elements.append(img)
-                            elements.append(Spacer(1, 12))
+                    for s_name in ["Team Profile","Type Distribution","Team Insights","Actions and Next Steps"]:
+                        process_markdown(report_dict[s_name])
+                        if s_name == "Type Distribution":
+                            elements.append(Spacer(1,12))
+                            distbuf = io.BytesIO(distribution_plot)
+                            distimg = ReportLabImage(distbuf, width=400, height=240)
+                            elements.append(distimg)
+                            elements.append(Spacer(1,12))
 
                     doc.build(elements)
                     pdf_buffer.seek(0)
@@ -524,12 +522,12 @@ if st.button("Generate Report from CSV"):
 
                 # Build PDF
                 pdf_data = convert_markdown_to_pdf_with_cover(
-                    report_sections,
-                    type_distribution_plot,
-                    logo_path,
-                    company_name,
-                    team_name,
-                    custom_date
+                    report_dict=report_sections,
+                    distribution_plot=type_distribution_plot,
+                    logo_path=logo_path,
+                    company_name=company_name,
+                    team_name=team_name,
+                    date_str=custom_date
                 )
 
                 st.download_button(

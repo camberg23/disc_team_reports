@@ -517,8 +517,8 @@ if st.button("Generate Report from CSV"):
                             elements.append(Spacer(1,12))
 
                     doc.build(elements)
-                    pdf_buffer.seek(0)
-                    return pdf_buffer
+                    pdf_buf.seek(0)
+                    return pdf_buf
 
                 # Build PDF
                 pdf_data = convert_markdown_to_pdf_with_cover(

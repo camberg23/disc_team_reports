@@ -26,6 +26,7 @@ from markdown2 import markdown
 from bs4 import BeautifulSoup
 import datetime
 import json
+import numpy as np  # NEW: Import numpy as np
 
 # ----------------------------------------------------------------------------------
 # DISC Type Mappings
@@ -62,6 +63,77 @@ def parse_disc_type(text: str) -> str:
         return f"{codes[0]}/{codes[1].lower()}"
     else:
         return ""
+
+# ----------------------------------------------------------------------------------
+# Improved Plotting Functions (for DISC)
+# ----------------------------------------------------------------------------------
+def _generate_pie_chart(data, slices, scaling_factor=1.6, label_multiplier=1.3):
+    # Filter out slices with 0 counts
+    filtered_slices = [s for s in slices if data.get(s['label'], 0) > 0]
+    
+    total = sum(data.get(s['label'], 0) for s in filtered_slices)
+    if total == 0:
+        print("No data to plot.")
+        return None
+
+    current_angle = 0
+    for s in filtered_slices:
+        count = data.get(s['label'], 0)
+        proportion = count / total
+        angle = proportion * 360
+        s['theta1'] = current_angle
+        s['theta2'] = current_angle + angle
+        s['radius'] = 1.0 + proportion * scaling_factor
+        current_angle += angle
+
+    fig, ax = plt.subplots(figsize=(8,8))
+    for s in filtered_slices:
+        wedge = plt.matplotlib.patches.Wedge(
+            center=(0, 0),
+            r=s['radius'],
+            theta1=s['theta1'],
+            theta2=s['theta2'],
+            color=s['color'],
+            edgecolor='white'
+        )
+        ax.add_patch(wedge)
+
+    # Move labels farther out using label_multiplier
+    for s in filtered_slices:
+        theta_mid = (s['theta1'] + s['theta2']) / 2
+        x = label_multiplier * s['radius'] * np.cos(np.radians(theta_mid))
+        y = label_multiplier * s['radius'] * np.sin(np.radians(theta_mid))
+        ax.text(
+            x, y, s['label'],
+            ha='center', va='center', fontsize=12, color=s['color'], fontweight='bold'
+        )
+
+    ax.set_xlim(-2.5, 2.5)
+    ax.set_ylim(-2.5, 2.5)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    plt.tight_layout()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close(fig)
+    return buf.getvalue()
+
+def plot_disc_chart(data):
+    slices = [
+        {'label': 'D/c', 'color': '#355760'},
+        {'label': 'D', 'color': '#3E7279'},
+        {'label': 'D/i', 'color': '#B6823E'},
+        {'label': 'I', 'color': '#D2A26C'},
+        {'label': 'I/s', 'color': '#DD7C65'},
+        {'label': 'S/i', 'color': '#D35858'},
+        {'label': 'S', 'color': '#C5744B'},
+        {'label': 'S/c', 'color': '#87AC73'},
+        {'label': 'C/s', 'color': '#6E9973'},
+        {'label': 'C', 'color': '#4D8570'}
+    ]
+    return _generate_pie_chart(data, slices, scaling_factor=1.6, label_multiplier=1.3)
 
 # ----------------------------------------------------------------------------------
 # Prompts
@@ -114,7 +186,6 @@ Write the **Team Profile** section of the report (Section 1).
 
 **Begin your section below:**
 """,
-    # We add a placeholder {DISTRIBUTION_TABLE} so the LLM sees exact counts.
     "Type Distribution": """
 {INITIAL_CONTEXT}
 
@@ -255,8 +326,6 @@ if st.button("Generate Report from CSV"):
                 }
 
                 # Build a textual table of counts for injection
-                # so the LLM sees the real data and doesn't guess
-                # We'll include all possible DISC types (including subtypes)
                 disc_primaries = ['D','I','S','C']
                 disc_subtypes = ['D/i','I/d','I/s','S/i','S/c','C/s','D/c','C/d']
                 all_disc = disc_primaries + disc_subtypes
@@ -289,23 +358,8 @@ if st.button("Generate Report from CSV"):
                 type_people_json = json.dumps(type_to_people, indent=2)
                 # ----------------------------------------------------------------------------------
 
-                # Make bar chart
-                sns.set_style('whitegrid')
-                plt.rcParams.update({'font.family': 'serif'})
-                plt.figure(figsize=(10,6))
-                sorted_types = sorted(type_counts.keys())
-                sorted_counts = [type_counts[t] for t in sorted_types]
-                sns.barplot(x=sorted_types, y=sorted_counts, palette='viridis')
-                plt.title('DISC Type Distribution', fontsize=16)
-                plt.xlabel('DISC Types/Styles', fontsize=14)
-                plt.ylabel('Number of Team Members', fontsize=14)
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                buf = io.BytesIO()
-                plt.savefig(buf, format='png')
-                buf.seek(0)
-                type_distribution_plot = buf.getvalue()
-                plt.close()
+                # Use the improved pie chart for DISC type distribution instead of a bar chart
+                type_distribution_plot = plot_disc_chart(type_counts)
 
                 # LLM
                 chat_model = ChatOpenAI(
@@ -336,7 +390,6 @@ if st.button("Generate Report from CSV"):
                 for sec_name in section_order:
                     prompt_template = PromptTemplate.from_template(prompts[sec_name])
                     if sec_name == "Type Distribution":
-                        # pass the distribution_table to LLM
                         prompt_vars = {
                             "INITIAL_CONTEXT": formatted_init.strip(),
                             "REPORT_SO_FAR": report_so_far.strip(),
@@ -548,7 +601,6 @@ if st.button("Generate Report from CSV"):
                     pdf_buf.seek(0)
                     return pdf_buf
 
-                # Build PDF
                 pdf_data = convert_markdown_to_pdf_with_cover(
                     report_dict=report_sections,
                     distribution_plot=type_distribution_plot,

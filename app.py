@@ -165,6 +165,7 @@ Generate a comprehensive team personality report based on DISC, adhering to thes
 6. Maintain a professional, neutral tone.
 7. Use **Markdown headings**: `##` for main sections (1,2,3,4) and `###` (or smaller) for subheadings.
 8. Provide blank lines between paragraphs and bullets for clarity.
+9. IMPORTANT: always refer to it as 'your team' or 'the team' and NEVER as 'our team' (you're not on their team!)
 """
 
 prompts = {

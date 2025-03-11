@@ -318,28 +318,62 @@ if st.button("Generate Report from CSV"):
 
                 team_members_list = "\n".join(disc_lines)
 
-                from collections import Counter
-                type_counts = Counter([v[1] for v in valid_rows])
-                total_members = len(valid_rows)
-                type_percentages = {
-                    t: round((count/total_members)*100)
-                    for t, count in type_counts.items()
-                }
-
-                # Build a textual table of counts for injection
+                # -------------------------------------------------------------
+                # 1) Define core styles + hybrid types
                 disc_primaries = ['D','I','S','C']
-                disc_subtypes = ['D/i','I/d','I/s','S/i','S/c','C/s','D/c','C/d']
-                all_disc = disc_primaries + disc_subtypes
+                disc_hybrids = ['D/i','I/d','I/s','S/i','S/c','C/s','D/c','C/d']
+                all_disc = disc_primaries + disc_hybrids
 
-                distribution_table_md = "Type | Count | Percentage\n---|---|---\n"
-                for dstyle in all_disc:
-                    c = type_counts.get(dstyle, 0)
-                    p = type_percentages.get(dstyle, 0)
-                    distribution_table_md += f"{dstyle} | {c} | {p}%\n"
+                # 2) Build separate counters for "core styles" vs. "full types"
+                style_counts = {s: 0 for s in disc_primaries}
+                type_counts = {t: 0 for t in all_disc}
 
-                # ----------------------------------------------------------------------------------
-                # New: Build dictionary mapping DISC types to list of people
-                # For hybrid types, also add the person to the primary style.
+                # 3) Count each row's DISC code in both style_counts and type_counts
+                for nm, d in valid_rows:
+                    # Always increment the specific type (e.g., D/i) in type_counts
+                    if d in type_counts:
+                        type_counts[d] += 1
+                    else:
+                        # If there's an unexpected code, handle gracefully
+                        type_counts[d] = 1
+
+                    # For style_counts, increment only the single-letter "primary" style.
+                    # If it's hybrid (e.g., 'D/i'), split and use the first uppercase letter.
+                    if '/' in d:
+                        primary = d.split('/')[0]
+                        if primary in style_counts:
+                            style_counts[primary] += 1
+                    else:
+                        # No slash => it's one of the single styles (D,I,S,C)
+                        if d in style_counts:
+                            style_counts[d] += 1
+
+                total_members = len(valid_rows)
+
+                # 4) Build a table for the four core styles
+                core_style_table_md = "## Team Composition by Core Style\n"
+                core_style_table_md += "Style | Count | Percentage\n"
+                core_style_table_md += "---|---|---\n"
+                for style in disc_primaries:
+                    c = style_counts[style]
+                    pct = round((c / total_members)*100) if total_members > 0 else 0
+                    core_style_table_md += f"{style} | {c} | {pct}%\n"
+
+                # 5) Build a table for all DISC types (including hybrids)
+                type_table_md = "## Team Composition by Type\n"
+                type_table_md += "Type | Count | Percentage\n"
+                type_table_md += "---|---|---\n"
+                for t in all_disc:
+                    c = type_counts[t]
+                    pct = round((c / total_members)*100) if total_members > 0 else 0
+                    type_table_md += f"{t} | {c} | {pct}%\n"
+
+                # 6) Combine them into one Markdown string for the prompt or display
+                distribution_table_md = core_style_table_md + "\n\n" + type_table_md
+                # -------------------------------------------------------------
+
+                # Build dictionary mapping DISC types to list of people
+                # (For hybrid types, also add the person to the primary style.)
                 type_to_people = { d: [] for d in all_disc }
                 for name, d in valid_rows:
                     if '/' in d:
@@ -357,9 +391,8 @@ if st.button("Generate Report from CSV"):
                             type_to_people[d] = [name]
 
                 type_people_json = json.dumps(type_to_people, indent=2)
-                # ----------------------------------------------------------------------------------
 
-                # Use the improved pie chart for DISC type distribution instead of a bar chart
+                # Build pie chart of total types
                 type_distribution_plot = plot_disc_chart(type_counts)
 
                 # LLM
@@ -407,7 +440,7 @@ if st.button("Generate Report from CSV"):
                     report_sections[sec_name] = sec_text.strip()
                     report_so_far += f"\n\n{sec_text.strip()}"
 
-                # Output
+                # Output to Streamlit
                 for sec_name in section_order:
                     st.markdown(report_sections[sec_name])
                     if sec_name == "Type Distribution":

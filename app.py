@@ -722,6 +722,7 @@ def parse_disc_type(text: str) -> str:
 # Improved Plotting Functions (for DISC)
 # ----------------------------------------------------------------------------------
 def _generate_pie_chart(data, slices, scaling_factor=1.6, label_multiplier=1.3):
+    """Generates an exploded pie chart that does NOT double-count people. Each key in 'data' is counted once."""
     # Filter out slices with 0 counts
     filtered_slices = [s for s in slices if data.get(s['label'], 0) > 0]
     
@@ -775,17 +776,24 @@ def _generate_pie_chart(data, slices, scaling_factor=1.6, label_multiplier=1.3):
     return buf.getvalue()
 
 def plot_disc_chart(data):
+    """
+    Pie chart slices covering all 4 single-letter styles (D,I,S,C) plus
+    8 hybrids (D/i, I/d, I/s, S/i, S/c, C/s, D/c, C/d), ensuring
+    no double-counting in the final display.
+    """
     slices = [
-        {'label': 'D/c', 'color': '#355760'},
-        {'label': 'D', 'color': '#3E7279'},
-        {'label': 'D/i', 'color': '#B6823E'},
-        {'label': 'I', 'color': '#D2A26C'},
-        {'label': 'I/s', 'color': '#DD7C65'},
-        {'label': 'S/i', 'color': '#D35858'},
-        {'label': 'S', 'color': '#C5744B'},
-        {'label': 'S/c', 'color': '#87AC73'},
-        {'label': 'C/s', 'color': '#6E9973'},
-        {'label': 'C', 'color': '#4D8570'}
+        {'label': 'D',    'color': '#3E7279'},
+        {'label': 'I',    'color': '#D2A26C'},
+        {'label': 'S',    'color': '#C5744B'},
+        {'label': 'C',    'color': '#4D8570'},
+        {'label': 'D/i',  'color': '#B6823E'},
+        {'label': 'I/d',  'color': '#B8A04C'},  # new color for I/d
+        {'label': 'I/s',  'color': '#DD7C65'},
+        {'label': 'S/i',  'color': '#D35858'},
+        {'label': 'S/c',  'color': '#87AC73'},
+        {'label': 'C/s',  'color': '#6E9973'},
+        {'label': 'D/c',  'color': '#355760'},
+        {'label': 'C/d',  'color': '#7B8A2A'}
     ]
     return _generate_pie_chart(data, slices, scaling_factor=1.6, label_multiplier=1.3)
 
@@ -863,7 +871,7 @@ Please follow these steps in your text (in Markdown):
    Present the four primary styles (D, I, S, C) with their count and percentage. Provide short descriptive text for each style.  
 
 2. **Hybrid Types Table**  
-   Present each hybrid type (e.g., D/i, I/s, etc.) with its count and percentage, including a concise description for each.  
+   Present each hybrid type (e.g., D/i, I/d, I/s, etc.) with its count and percentage, including a concise description for each.  
 
 3. **Dominant Types**  
    Explain how the most common styles or hybrids influence communication, decision-making, etc.
@@ -996,7 +1004,6 @@ if st.button("Generate Report from CSV"):
                     if d in type_counts:
                         type_counts[d] += 1
                     else:
-                        # If there's an unexpected code, handle gracefully
                         type_counts[d] = 1
 
                     # For style_counts, increment only the single-letter "primary" style.
@@ -1006,7 +1013,6 @@ if st.button("Generate Report from CSV"):
                         if primary in style_counts:
                             style_counts[primary] += 1
                     else:
-                        # No slash => it's one of the single styles (D,I,S,C)
                         if d in style_counts:
                             style_counts[d] += 1
 
@@ -1021,7 +1027,7 @@ if st.button("Generate Report from CSV"):
                     pct = round((c / total_members)*100) if total_members > 0 else 0
                     core_style_table_md += f"{style} | {c} | {pct}%\n"
 
-                # 5) Build a table for all DISC types (including hybrids)
+                # 5) Build a table for all DISC hybrid types
                 type_table_md = "## Team Composition by Hybrid Type\n"
                 type_table_md += "Type | Count | Percentage\n"
                 type_table_md += "---|---|---\n"
@@ -1054,7 +1060,7 @@ if st.button("Generate Report from CSV"):
 
                 type_people_json = json.dumps(type_to_people, indent=2)
 
-                # Build pie chart of total types
+                # Build pie chart of total types (no double-counting)
                 type_distribution_plot = plot_disc_chart(type_counts)
 
                 # LLM

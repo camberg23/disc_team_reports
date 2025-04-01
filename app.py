@@ -216,8 +216,8 @@ Please follow these steps in your text (in Markdown):
 1. **Primary Styles Table**  
    Present the four primary styles (D, I, S, C) with their count and percentage. Provide short descriptive text for each style.  
 
-2. **Hybrid Types Table**  
-   Present each hybrid type (e.g., D/i, I/d, I/s, etc.) with its count and percentage, including a concise description for each.  
+2. **DISC Types Table**  
+   Present each DISC type (including both primary styles: D, I, S, C and hybrid types: D/i, I/d, I/s, etc.) with its count and percentage, including a concise description for each.
 
 3. **Dominant Types**  
    Explain how the most common styles or hybrids influence communication, decision-making, etc.
@@ -373,14 +373,15 @@ if st.button("Generate Report from CSV"):
                     pct = round((c / total_members)*100) if total_members > 0 else 0
                     core_style_table_md += f"{style} | {c} | {pct}%\n"
 
-                # 5) Build a table for all DISC hybrid types
-                type_table_md = "## Team Composition by Hybrid Type\n"
+                # 5) Build a table for all DISC types (including single-letter styles + hybrids)
+                type_table_md = "## Team Composition by DISC Types\n"
                 type_table_md += "Type | Count | Percentage\n"
                 type_table_md += "---|---|---\n"
-                for t in disc_hybrids:
+                for t in all_disc:
                     c = type_counts[t]
                     pct = round((c / total_members)*100) if total_members > 0 else 0
                     type_table_md += f"{t} | {c} | {pct}%\n"
+
 
                 # 6) Combine them into one Markdown string for the prompt or display
                 distribution_table_md = core_style_table_md + "\n\n" + type_table_md

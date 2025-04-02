@@ -188,10 +188,18 @@ Write the **Team Profile** section of the report (Section 1).
 
 - Briefly introduce the DISC framework as Drive (D), Influence (I), Support (S), Clarity (C).
 - Mention hybrid types with slash-lowercase (e.g., D/i, I/s, S/c).
-- Outline the core characteristics of each DISC type/style actually present on the team (primary or hybrid).
-- Describe how this combination of types affects foundational team dynamics.
-- Use appropriate subheadings and blank lines.
-- Required length: ~500 words.
+- For each DISC **style** (D, I, S, C), describe the core characteristics and how they contribute to team dynamics.
+    - Only include names of team members with that style if they are **not** a hybrid type.
+    - If you include any names for a style, **list all of them** — never say “among others” or “such as.”
+- For each DISC **type** (D, I, S, C, and all hybrids), describe how that type influences behavior and collaboration.
+    - Include **all team members** who have each DISC type.
+    - Use this as the definitive list of who holds which DISC type.
+
+- Use subheadings for each style and type.
+- Use full names when listing team members.
+- Add blank lines between sections and bullets for readability.
+
+Required length: ~500–600 words.
 
 **Begin your section below:**
 """,
@@ -389,21 +397,45 @@ if st.button("Generate Report from CSV"):
 
                 # Build dictionary mapping DISC types to list of people
                 # (For hybrid types, also add the person to the primary style.)
-                type_to_people = { d: [] for d in all_disc }
-                for name, d in valid_rows:
-                    if '/' in d:
-                        primary = d.split('/')[0]
-                        if primary in type_to_people:
-                            type_to_people[primary].append(name)
-                        if d in type_to_people:
-                            type_to_people[d].append(name)
-                        else:
-                            type_to_people[d] = [name]
+                # type_to_people = { d: [] for d in all_disc }
+                # for name, d in valid_rows:
+                #     if '/' in d:
+                #         primary = d.split('/')[0]
+                #         if primary in type_to_people:
+                #             type_to_people[primary].append(name)
+                #         if d in type_to_people:
+                #             type_to_people[d].append(name)
+                #         else:
+                #             type_to_people[d] = [name]
+                #     else:
+                #         if d in type_to_people:
+                #             type_to_people[d].append(name)
+                #         else:
+                #             type_to_people[d] = [name]
+                # Build dictionary mapping DISC types to list of people (for the report)
+                # For style listings, only include people whose type is *not* a hybrid
+                type_to_people = {}
+                
+                for d in all_disc:
+                    type_to_people[d] = []
+                
+                # Separate out style-level assignments (D/I/S/C) vs full type (includes hybrids)
+                style_to_people = {s: [] for s in disc_primaries}
+                
+                for name, disc_code in valid_rows:
+                    # Add to full type list no matter what
+                    if disc_code in type_to_people:
+                        type_to_people[disc_code].append(name)
                     else:
-                        if d in type_to_people:
-                            type_to_people[d].append(name)
-                        else:
-                            type_to_people[d] = [name]
+                        type_to_people[disc_code] = [name]
+                
+                    # Only add to style if this is a primary style (not a hybrid like "I/d")
+                    if '/' not in disc_code and disc_code in style_to_people:
+                        style_to_people[disc_code].append(name)
+                
+                # Merge style_to_people into type_to_people so both are available to the LLM
+                for s in disc_primaries:
+                    type_to_people[s] = style_to_people[s]
 
                 type_people_json = json.dumps(type_to_people, indent=2)
 
